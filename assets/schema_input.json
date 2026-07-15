@@ -7,27 +7,52 @@
     "items": {
         "type": "object",
         "properties": {
-            "sample": {
+            "sample_id": {
                 "type": "string",
                 "pattern": "^\\S+$",
-                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "errorMessage": "sample_id must be provided and cannot contain spaces",
                 "meta": ["id"]
             },
-            "fastq_1": {
+            "assembly": {
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "pattern": "^\\S+\\.f(ast|n)?a(sta)?(\\.gz)?$",
+                "errorMessage": "assembly must be a FASTA file (.fa/.fasta/.fna, optionally gzipped) and must exist. This is the de novo assembly that was classified by sanger-tol/blobtoolkit to produce 'blobdir'."
             },
-            "fastq_2": {
+            "blobdir": {
+                "type": "string",
+                "format": "directory-path",
+                "exists": true,
+                "errorMessage": "blobdir must be an existing directory: the BlobDir produced for this sample by sanger-tol/blobtoolkit (or 'blobtools create'). This pipeline never regenerates it."
+            },
+            "reads_cram": {
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "pattern": "^\\S+\\.cram$",
+                "errorMessage": "reads_cram, if given, must be an existing .cram file of the short reads already aligned to 'assembly' (the same CRAM used by the upstream blobtoolkit run)."
+            },
+            "reads_r1": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
+                "errorMessage": "reads_r1, if given, must be an existing gzipped FASTQ file."
+            },
+            "reads_r2": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
+                "errorMessage": "reads_r2, if given, must be an existing gzipped FASTQ file."
             }
         },
-        "required": ["sample", "fastq_1"]
+        "required": ["sample_id", "assembly", "blobdir"],
+        "anyOf": [
+            { "required": ["reads_cram"] },
+            { "required": ["reads_r1", "reads_r2"] }
+        ],
+        "errorMessage": "Each row must provide either 'reads_cram', or both 'reads_r1' and 'reads_r2', to compute read coverage for purge_dups/purge_haplotigs."
     }
 }

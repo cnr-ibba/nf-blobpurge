@@ -3,12 +3,18 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { FASTQC                 } from '../modules/nf-core/fastqc/main'
-include { MULTIQC                } from '../modules/nf-core/multiqc/main'
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_nf-blobpurge_pipeline'
+include { BTK_FILTER              } from '../modules/local/btk_filter/main'
+include { ASSEMBLY_STATS          } from '../modules/local/assembly_stats/main'
+include { BLOBPURGE_REPORT        } from '../modules/local/blobpurge_report/main'
+include { READ_COVERAGE           } from '../subworkflows/local/read_coverage'
+include { PURGE_DUPS              } from '../subworkflows/local/purge_dups'
+include { PURGE_HAPLOTIGS         } from '../subworkflows/local/purge_haplotigs'
+include { BUSCO_COMPARE           } from '../subworkflows/local/busco_compare'
+include { MULTIQC                 } from '../modules/nf-core/multiqc/main'
+include { paramsSummaryMap        } from 'plugin/nf-schema'
+include { paramsSummaryMultiqc    } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML  } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText  } from '../subworkflows/local/utils_nfcore_nf-blobpurge_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -16,10 +22,10 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_nf-b
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-workflow NF-BLOBPURGE {
+workflow BLOBPURGE {
 
     take:
-    ch_samplesheet // channel: samplesheet read in from --input
+    ch_samplesheet // channel: [ meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 ]
     multiqc_config
     multiqc_logo
     multiqc_methods_description
@@ -27,13 +33,108 @@ workflow NF-BLOBPURGE {
 
     main:
 
-    def ch_versions = channel.empty()
-    def ch_multiqc_files = channel.empty()
+    def ch_versions       = channel.empty()
+    def ch_multiqc_files  = channel.empty()
+    def ch_stage_fastas   = channel.empty() // [ meta, stage, fasta ]
+    def ch_caveats        = channel.empty() // [ meta, caveat_string ]
+
+    ch_stage_fastas = ch_stage_fastas.mix(
+        ch_samplesheet.map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> [ meta, 'raw', assembly ] }
+    )
+
     //
-    // MODULE: Run FastQC
+    // STEP 1: contamination filtering, cross-checked against the BlobDir
     //
-    FASTQC(ch_samplesheet)
-    ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.map{ _meta, file -> file })
+    BTK_FILTER(
+        ch_samplesheet.map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> [ meta, assembly, blobdir ] }
+    )
+    ch_versions = ch_versions.mix(BTK_FILTER.out.versions)
+    ch_stage_fastas = ch_stage_fastas.mix(BTK_FILTER.out.fasta.map { meta, fasta -> [ meta, 'filtered', fasta ] })
+
+    //
+    // STEP 2: read coverage for purge_dups (CRAM subset, or fresh bwa-mem2 mapping)
+    //
+    ch_samplesheet
+        .join(BTK_FILTER.out.fasta)
+        .join(BTK_FILTER.out.retained_ids)
+        .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2, filtered_fasta, retained_ids ->
+            [ meta, assembly, filtered_fasta, retained_ids, reads_cram ?: [], reads_r1 ?: [], reads_r2 ?: [] ]
+        }
+        .set { ch_for_coverage }
+
+    READ_COVERAGE(ch_for_coverage)
+    ch_versions = ch_versions.mix(READ_COVERAGE.out.versions)
+    ch_caveats  = ch_caveats.mix(READ_COVERAGE.out.caveats)
+
+    //
+    // STEP 3: purge_dups (always run)
+    //
+    PURGE_DUPS(
+        BTK_FILTER.out.fasta,
+        READ_COVERAGE.out.stat,
+        READ_COVERAGE.out.base_cov
+    )
+    ch_versions = ch_versions.mix(PURGE_DUPS.out.versions)
+    ch_stage_fastas = ch_stage_fastas.mix(PURGE_DUPS.out.purged_fasta.map { meta, fasta -> [ meta, 'purge_dups', fasta ] })
+
+    //
+    // STEP 4: purge_haplotigs cross-check (optional, independent, in parallel to purge_dups)
+    //
+    if (params.run_purge_haplotigs) {
+        PURGE_HAPLOTIGS(
+            BTK_FILTER.out.fasta,
+            READ_COVERAGE.out.bam
+        )
+        ch_versions = ch_versions.mix(PURGE_HAPLOTIGS.out.versions)
+        ch_caveats  = ch_caveats.mix(PURGE_HAPLOTIGS.out.caveats)
+        ch_stage_fastas = ch_stage_fastas.mix(PURGE_HAPLOTIGS.out.purged_fasta.map { meta, fasta -> [ meta, 'purge_haplotigs', fasta ] })
+    }
+
+    //
+    // STEP 5: traceable span/N50 per stage, and comparative BUSCO per stage x lineage
+    //
+    ASSEMBLY_STATS(ch_stage_fastas)
+    ch_versions = ch_versions.mix(ASSEMBLY_STATS.out.versions)
+
+    ASSEMBLY_STATS.out.stats
+        .map { meta, _stage, stats -> [ meta, stats ] }
+        .groupTuple()
+        .set { ch_stats_grouped }
+
+    BUSCO_COMPARE(ch_stage_fastas)
+    ch_versions = ch_versions.mix(BUSCO_COMPARE.out.versions)
+    ch_multiqc_files = ch_multiqc_files.mix(
+        BUSCO_COMPARE.out.short_summaries.map { _meta, _stage, _lineage, summary -> summary }
+    )
+
+    //
+    // STEP 6: per-sample report
+    //
+    def ch_genomescope = params.genomescope_summary
+        ? Channel.fromPath(params.genomescope_summary, checkIfExists: true)
+        : Channel.fromPath("${projectDir}/assets/NO_FILE")
+
+    ch_samplesheet
+        .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> meta }
+        .combine(ch_genomescope)
+        .set { ch_genomescope_per_sample }
+
+    ch_caveats
+        .groupTuple()
+        .set { ch_caveats_grouped }
+
+    ch_stats_grouped
+        .join(BTK_FILTER.out.span_check)
+        .join(BUSCO_COMPARE.out.comparison_json)
+        .join(ch_genomescope_per_sample)
+        .join(ch_caveats_grouped, remainder: true)
+        .map { meta, stats, span_check, busco_json, genomescope, caveats ->
+            [ meta, stats, span_check, busco_json, genomescope, caveats ?: [] ]
+        }
+        .set { ch_for_report }
+
+    BLOBPURGE_REPORT(ch_for_report)
+    ch_versions = ch_versions.mix(BLOBPURGE_REPORT.out.versions)
 
     //
     // Collate and save software versions
@@ -90,7 +191,8 @@ workflow NF-BLOBPURGE {
             ]
         }
     )
-    emit:multiqc_report = MULTIQC.out.report.map { _meta, report -> [report] }.toList() // channel: /path/to/multiqc_report.html
+    emit:
+    multiqc_report = MULTIQC.out.report.map { _meta, report -> [report] }.toList() // channel: /path/to/multiqc_report.html
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

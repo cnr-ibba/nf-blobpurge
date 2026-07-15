@@ -10,13 +10,45 @@
 
 ## Pipeline tools
 
-- [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
+- [BlobToolKit](https://pubmed.ncbi.nlm.nih.gov/32041455/)
 
-> Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].
+  > Challis R, Richards E, Rajan J, Cochrane G, Blaxter M. BlobToolKit - Interactive Quality Assessment of Genome Assemblies. G3 (Bethesda). 2020 Apr 7;10(4):1361-1374. doi: 10.1534/g3.119.400908. PubMed PMID: 32041455.
+
+- [minimap2](https://pubmed.ncbi.nlm.nih.gov/29750242/)
+
+  > Li H. Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics. 2018 Sep 15;34(18):3094-3100. doi: 10.1093/bioinformatics/bty191. PubMed PMID: 29750242.
+
+- [purge_dups](https://pubmed.ncbi.nlm.nih.gov/31971576/)
+
+  > Guan D, McCarthy SA, Wood J, Howe K, Wang Y, Durbin R. Identifying and removing haplotypic duplication in primary genome assemblies. Bioinformatics. 2020 May 1;36(9):2896-2898. doi: 10.1093/bioinformatics/btaa025. PubMed PMID: 31971576.
+
+- [purge_haplotigs](https://pubmed.ncbi.nlm.nih.gov/30497373/)
+
+  > Roach MJ, Schmidt SA, Borneman AR. Purge Haplotigs: allelic contig reassignment for third-gen diploid genome assemblies. BMC Bioinformatics. 2018 Nov 29;19(1):460. doi: 10.1186/s12859-018-2485-7. PubMed PMID: 30497373.
+
+- [bwa-mem2](https://doi.org/10.1109/IPDPS.2019.00041)
+
+  > Vasimuddin M, Misra S, Li H, Aluru S. Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. IEEE International Parallel and Distributed Processing Symposium (IPDPS), 2019. doi: 10.1109/IPDPS.2019.00041.
+
+- [SAMtools](https://pubmed.ncbi.nlm.nih.gov/33590861/)
+
+  > Danecek P, Bonfield JK, Liddle J, Marshall J, Ohan V, Pollard MO, Whitwham A, Keane T, McCarthy SA, Davies RM, Li H. Twelve years of SAMtools and BCFtools. Gigascience. 2021 Feb 16;10(2):giab008. doi: 10.1093/gigascience/giab008. PubMed PMID: 33590861.
+
+- [BUSCO](https://pubmed.ncbi.nlm.nih.gov/34320186/)
+
+  > Manni M, Berkeley MR, Seppey M, Simao FA, Zdobnov EM. BUSCO Update: Novel and Streamlined Workflows along with Broader and Deeper Phylogenetic Coverage for Scoring of Eukaryotic, Prokaryotic, and Viral Genomes. Mol Biol Evol. 2021 Oct 4;38(10):4647-4654. doi: 10.1093/molbev/msab199. PubMed PMID: 34320186.
+
+- [GenomeScope2](https://pubmed.ncbi.nlm.nih.gov/32059766/) (consumed as an optional report input, not run by this pipeline)
+
+  > Ranallo-Benavidez TR, Jaron KS, Schatz MC. GenomeScope 2.0 and Smudgeplot for reference-free profiling of polyploid genomes. Nat Commun. 2020 Feb 17;11(1):1432. doi: 10.1038/s41467-020-14998-3. PubMed PMID: 32059766.
 
 - [MultiQC](https://pubmed.ncbi.nlm.nih.gov/27312411/)
 
-> Ewels P, Magnusson M, Lundin S, Käller M. MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics. 2016 Oct 1;32(19):3047-8. doi: 10.1093/bioinformatics/btw354. Epub 2016 Jun 16. PubMed PMID: 27312411; PubMed Central PMCID: PMC5039924.
+  > Ewels P, Magnusson M, Lundin S, Käller M. MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics. 2016 Oct 1;32(19):3047-8. doi: 10.1093/bioinformatics/btw354. Epub 2016 Jun 16. PubMed PMID: 27312411; PubMed Central PMCID: PMC5039924.
+
+## Upstream pipeline
+
+- [sanger-tol/blobtoolkit](https://github.com/sanger-tol/blobtoolkit) -- generates the BlobDir this pipeline consumes as input; not run by blobpurge itself.
 
 ## Software packaging/containerisation tools
 

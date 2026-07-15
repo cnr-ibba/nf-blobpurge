@@ -1,0 +1,13 @@
+{
+  "id": "length",
+  "name": "length",
+  "type": "variable",
+  "values": [
+    3000,
+    3000,
+    12000,
+    1200,
+    1000,
+    8000
+  ]
+}

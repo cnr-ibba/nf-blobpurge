@@ -1,0 +1,37 @@
+{
+  "id": "blobpurge_test",
+  "name": "blobpurge synthetic test BlobDir",
+  "record_type": "contig",
+  "settings": {
+    "taxrule": "bestsumorder",
+    "taxrules": [
+      "bestsumorder"
+    ]
+  },
+  "fields": [
+    {
+      "id": "identifiers",
+      "type": "identifier"
+    },
+    {
+      "id": "length",
+      "type": "variable"
+    },
+    {
+      "id": "gc",
+      "type": "variable"
+    },
+    {
+      "id": "ncount",
+      "type": "variable"
+    },
+    {
+      "id": "buscoregions_phylum",
+      "type": "category"
+    },
+    {
+      "id": "bestsumorder_phylum",
+      "type": "category"
+    }
+  ]
+}

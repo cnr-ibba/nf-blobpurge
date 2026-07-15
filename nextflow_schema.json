@@ -43,41 +43,95 @@
                 }
             }
         },
-        "reference_genome_options": {
-            "title": "Reference genome options",
+        "contamination_filtering_options": {
+            "title": "Contamination filtering (BTK_FILTER)",
             "type": "object",
-            "fa_icon": "fas fa-dna",
-            "description": "Reference genome related files and options required for the workflow.",
+            "fa_icon": "fas fa-filter",
+            "description": "Options controlling how contaminant contigs are removed from each assembly, based on an existing BlobDir.",
+            "required": ["exclude_taxa"],
             "properties": {
-                "genome": {
+                "exclude_taxa": {
                     "type": "string",
-                    "description": "Name of iGenomes reference.",
-                    "fa_icon": "fas fa-book",
-                    "help_text": "If using a reference genome configured in the pipeline using iGenomes, use this parameter to give the ID for the reference. This is then used to build the full paths for all required reference genome files e.g. `--genome GRCh38`. \n\nSee the [nf-core website docs](https://nf-co.re/usage/reference_genomes) for more details."
+                    "description": "Comma-separated list of taxon names to remove as contamination (values of the --taxon_field category in the BlobDir, e.g. 'Pseudomonadota,Bacteroidota,Actinomycetota'). Mandatory: there is no default, since the taxa to exclude are assembly-specific.",
+                    "fa_icon": "fas fa-ban"
                 },
-                "fasta": {
+                "taxon_field": {
+                    "type": "string",
+                    "default": "buscoregions_phylum",
+                    "description": "Name of the categorical field in the BlobDir used to classify contigs for filtering (e.g. 'buscoregions_phylum', 'buscogenes_phylum', or any other rank/field present in the BlobDir).",
+                    "fa_icon": "fas fa-tags"
+                },
+                "taxrule": {
+                    "type": "string",
+                    "description": "Taxrule used to compute the BlobDir summary (e.g. 'bestsumorder', 'bestsum'). If not set, it is deduced from the BlobDir's meta.json; the pipeline fails with an explicit error if it cannot be deduced and none is given.",
+                    "fa_icon": "fas fa-list-ol"
+                },
+                "span_tolerance": {
+                    "type": "number",
+                    "default": 0.001,
+                    "description": "Maximum relative discrepancy allowed between (filtered assembly span + excluded contigs span) and the original assembly span before BTK_FILTER fails.",
+                    "fa_icon": "fas fa-balance-scale"
+                }
+            }
+        },
+        "busco_options": {
+            "title": "Comparative BUSCO options",
+            "type": "object",
+            "fa_icon": "fas fa-chart-bar",
+            "description": "Options controlling the comparative BUSCO runs across assembly stages.",
+            "required": ["busco_lineages"],
+            "properties": {
+                "busco_lineages": {
+                    "type": "string",
+                    "description": "Comma-separated list of BUSCO lineage datasets to run at every assembly stage (e.g. 'chlorophyta_odb12,viridiplantae_odb12'). Mandatory: --auto-lineage is never used by this pipeline.",
+                    "fa_icon": "fas fa-sitemap"
+                },
+                "busco_lineages_path": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Optional path to a local, pre-downloaded BUSCO lineages/datasets directory. If not given, BUSCO downloads lineage data on demand.",
+                    "fa_icon": "fas fa-folder-open"
+                }
+            }
+        },
+        "purging_options": {
+            "title": "Haplotig purging options",
+            "type": "object",
+            "fa_icon": "fas fa-clone",
+            "description": "Options controlling purge_dups and the purge_haplotigs cross-check.",
+            "properties": {
+                "run_purge_haplotigs": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run purge_haplotigs in parallel to purge_dups as an independent cross-check.",
+                    "fa_icon": "fas fa-check-double"
+                }
+            }
+        },
+        "report_options": {
+            "title": "Report options",
+            "type": "object",
+            "fa_icon": "fas fa-file-medical-alt",
+            "description": "Options controlling the per-sample blobpurge HTML report.",
+            "properties": {
+                "genomescope_summary": {
                     "type": "string",
                     "format": "file-path",
                     "exists": true,
-                    "mimetype": "text/plain",
-                    "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
-                    "description": "Path to FASTA genome file.",
-                    "help_text": "This parameter is *mandatory* if `--genome` is not specified. If you don't have a BWA index available this will be generated for you automatically. Combine with `--save_reference` to save BWA index for future runs.",
-                    "fa_icon": "far fa-file-code"
+                    "description": "Optional path to a GenomeScope2 summary.txt for the sample, used in the report to sanity-check the final assembly size. If not given, the report explicitly states it was not available (it is never silently skipped).",
+                    "fa_icon": "far fa-file-alt"
                 },
-                "igenomes_ignore": {
-                    "type": "boolean",
-                    "description": "Do not load the iGenomes reference config.",
-                    "fa_icon": "fas fa-ban",
-                    "hidden": true,
-                    "help_text": "Do not load `igenomes.config` when running the pipeline. You may choose this option if you observe clashes between custom parameters and those supplied in `igenomes.config`."
+                "busco_dup_drop_threshold": {
+                    "type": "number",
+                    "default": 0.5,
+                    "description": "Minimum relative reduction in BUSCO duplication (averaged across lineages, filtered vs purged) for the report to conclude the size surplus was 'explained' by heterozygous haplotigs.",
+                    "fa_icon": "fas fa-percentage"
                 },
-                "igenomes_base": {
-                    "type": "string",
-                    "description": "The base path to the igenomes reference files",
-                    "fa_icon": "fas fa-ban",
-                    "hidden": true,
-                    "default": "s3://ngi-igenomes/igenomes/"
+                "purge_disagreement_threshold": {
+                    "type": "number",
+                    "default": 0.15,
+                    "description": "Relative difference in purged span between purge_dups and purge_haplotigs above which the report flags a substantial disagreement between the two tools, to be resolved with long-read data rather than arbitrated automatically.",
+                    "fa_icon": "fas fa-exclamation-triangle"
                 }
             }
         },
@@ -237,7 +291,16 @@
             "$ref": "#/$defs/input_output_options"
         },
         {
-            "$ref": "#/$defs/reference_genome_options"
+            "$ref": "#/$defs/contamination_filtering_options"
+        },
+        {
+            "$ref": "#/$defs/busco_options"
+        },
+        {
+            "$ref": "#/$defs/purging_options"
+        },
+        {
+            "$ref": "#/$defs/report_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

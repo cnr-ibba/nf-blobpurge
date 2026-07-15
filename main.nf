@@ -13,21 +13,9 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { NF-BLOBPURGE  } from './workflows/nf-blobpurge'
+include { BLOBPURGE               } from './workflows/nf-blobpurge'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_nf-blobpurge_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_nf-blobpurge_pipeline'
-include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_nf-blobpurge_pipeline'
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    GENOME PARAMETER VALUES
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-// TODO nf-core: Remove this line if you don't need a FASTA file
-//   This is an example of how to use getGenomeAttribute() to fetch parameters
-//   from igenomes.config using `--genome`
-params.fasta = getGenomeAttribute('fasta')
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,7 +26,7 @@ params.fasta = getGenomeAttribute('fasta')
 //
 // WORKFLOW: Run main analysis pipeline depending on type of input
 //
-workflow CNRIBBA_NF-BLOBPURGE {
+workflow CNRIBBA_BLOBPURGE {
 
     take:
     samplesheet // channel: samplesheet read in from --input
@@ -48,7 +36,7 @@ workflow CNRIBBA_NF-BLOBPURGE {
     //
     // WORKFLOW: Run pipeline
     //
-    NF-BLOBPURGE (
+    BLOBPURGE (
         samplesheet,
         params.multiqc_config,
         params.multiqc_logo,
@@ -56,7 +44,7 @@ workflow CNRIBBA_NF-BLOBPURGE {
         params.outdir,
     )
     emit:
-    multiqc_report = NF-BLOBPURGE.out.multiqc_report // channel: /path/to/multiqc_report.html
+    multiqc_report = BLOBPURGE.out.multiqc_report // channel: /path/to/multiqc_report.html
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,7 +73,7 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    CNRIBBA_NF-BLOBPURGE (
+    CNRIBBA_BLOBPURGE (
         PIPELINE_INITIALISATION.out.samplesheet
     )
     //
@@ -97,7 +85,7 @@ workflow {
         params.plaintext_email,
         params.outdir,
         params.monochrome_logs,
-        CNRIBBA_NF-BLOBPURGE.out.multiqc_report
+        CNRIBBA_BLOBPURGE.out.multiqc_report
     )
 }
 

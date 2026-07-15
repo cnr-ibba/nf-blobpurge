@@ -2,32 +2,107 @@
 
 ## Introduction
 
-This document describes the output produced by the pipeline. Most of the plots are taken from the MultiQC report, which summarises results at the end of the pipeline.
-
-The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory.
-
-<!-- TODO nf-core: Write this documentation describing your workflow's output -->
+This document describes the output produced by the pipeline for each sample in the samplesheet. All paths below are relative to the top-level `--outdir` results directory.
 
 ## Pipeline overview
 
-The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:
+The pipeline processes each sample through the following stages:
 
-- [FastQC](#fastqc) - Raw read QC
-- [MultiQC](#multiqc) - Aggregate report describing results and QC from the whole pipeline
-- [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
+- [BTK_FILTER](#btk_filter) - contamination removal from an existing BlobDir, with a programmatic span-conservation check
+- [Read coverage](#read-coverage) - CRAM subsetting or bwa-mem2 mapping, feeding purge_dups' `ngscstat`
+- [purge_dups](#purge_dups) - haplotig purging
+- [purge_haplotigs](#purge_haplotigs) - independent cross-check of purge_dups (optional, on by default)
+- [Assembly stats](#assembly-stats) - span/N50/contig-count at every stage, machine-generated
+- [BUSCO comparison](#busco-comparison) - comparative completeness/duplication across stages and lineages
+- [blobpurge report](#blobpurge-report) - the final per-sample verdict
+- [MultiQC](#multiqc) - aggregate report across samples
+- [Pipeline information](#pipeline-information) - execution metrics and software versions
 
-### FastQC
+### BTK_FILTER
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `fastqc/`
-  - `*_fastqc.html`: FastQC report containing quality metrics.
-  - `*_fastqc.zip`: Zip archive containing the FastQC report, tab-delimited data file and plot images.
+- `btk/`
+  - `<sample_id>.filtered.fasta`: assembly with `--exclude_taxa` contigs removed.
+  - `retained_ids.txt` / `excluded_ids.txt`: contig IDs kept/removed.
+  - `<sample_id>.span_check.json`: the programmatic check that span(filtered) + span(excluded, from the BlobDir) == span(original) within `--span_tolerance`. The process fails if this does not hold.
+  - `<sample_id>.filter_summary.json`: raw `blobtools filter --summary STDOUT` output.
 
 </details>
 
-[FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) gives general quality metrics about your sequenced reads. It provides information about the quality score distribution across your reads, per base sequence content (%A/T/G/C), adapter contamination and overrepresented sequences. For further reading and documentation see the [FastQC help pages](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/).
+Runs `blobtools filter` against the existing BlobDir named in the samplesheet, using `--taxon_field`/`--exclude_taxa` (and `--taxrule`, deduced from the BlobDir's `meta.json` if not given).
+
+### Read coverage
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `samtools/` or `bwamem2/`: sorted/indexed BAM used for coverage (CRAM subset, or fresh bwa-mem2 mapping onto the filtered assembly).
+- `purgedups/<sample_id>.ngscstat.stat`, `<sample_id>.ngscstat.base.cov`: purge_dups Illumina coverage stats (`ngscstat`).
+
+</details>
+
+### purge_dups
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `purgedups/`
+  - `<sample_id>.split.fasta`, `<sample_id>.split.self.paf.gz`: self-alignment inputs/outputs.
+  - `<sample_id>.cutoffs`, `<sample_id>.hist.png`, `<sample_id>.calcuts.log`: `calcuts` thresholds and the coverage histogram plot for visual sanity-checking (not just the numbers).
+  - `<sample_id>.dups.bed`, `<sample_id>.purge_dups.log`: detected duplication regions.
+  - `<sample_id>.purged.fasta`: final purge_dups assembly.
+  - `<sample_id>.purged_haplotigs.fasta`: contigs/regions removed as haplotigs.
+
+</details>
+
+### purge_haplotigs
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `purgehaplotigs/`
+  - `<sample_id>.bam.200.gencov`, `<sample_id>.bam.histogram.200.png`: `purge_haplotigs hist` output (`200` is the tool's `-d/-depth` cutoff, embedded in its output filenames).
+  - `<sample_id>.cutoffs.json`, `<sample_id>.depth_hist.tsv`: automatically-estimated low/mid/high cutoffs and the depth histogram they were derived from.
+  - `<sample_id>.coverage_stats.csv`: `purge_haplotigs cov` output.
+  - `<sample_id>.curated.fasta`: final purge_haplotigs assembly.
+  - `<sample_id>.curated.haplotigs.fasta`: contigs removed as haplotigs.
+
+Only produced when `--run_purge_haplotigs` is `true` (default).
+
+</details>
+
+### Assembly stats
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `assembly/<sample_id>.<stage>.stats.json`: contig count, total span, N50, longest contig, for `stage` in `raw`, `filtered`, `purge_dups`, `purge_haplotigs`.
+
+</details>
+
+### BUSCO comparison
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `busco/<sample_id>.<stage>.<lineage>_busco/`: full BUSCO output directory per stage x lineage.
+- `busco/<sample_id>.<stage>.<lineage>.short_summary.json`: BUSCO's own summary JSON, the source of every number used downstream.
+- `compare/<sample_id>.busco_comparison.tsv`, `<sample_id>.busco_comparison.json`: one comparative table per sample, across all stages and lineages, plus the per-lineage duplication-drop figures used in the report's verdict.
+
+</details>
+
+Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineage`) against the raw, filtered, purge_dups and (if enabled) purge_haplotigs assemblies.
+
+### blobpurge report
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `analyses/<sample_id>_blobpurge.html`: the final, self-contained per-sample report -- span per stage, the BTK_FILTER span check, the GenomeScope2 comparison (or an explicit "not provided" notice), the BUSCO duplication trend per lineage, the purge_dups vs purge_haplotigs comparison (flagged if they disagree beyond `--purge_disagreement_threshold`), the collected caveats (ngscstat/Illumina path, purge_haplotigs on short-read coverage), and an explicit sì/parzialmente/no verdict on whether uncollapsed heterozygous haplotigs explain the assembly's size/duplication surplus.
+
+</details>
 
 ### MultiQC
 
@@ -35,15 +110,10 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 <summary>Output files</summary>
 
 - `multiqc/`
-  - `multiqc_report.html`: a standalone HTML file that can be viewed in your web browser.
-  - `multiqc_data/`: directory containing parsed statistics from the different tools used in the pipeline.
-  - `multiqc_plots/`: directory containing static images from the report in various formats.
+  - `multiqc_report.html`: aggregate report across all samples in the run (BUSCO results, software versions).
+  - `multiqc_data/`, `multiqc_plots/`: supporting data and static plot images.
 
 </details>
-
-[MultiQC](http://multiqc.info) is a visualization tool that generates a single HTML report summarising all samples in your project. Most of the pipeline QC results are visualised in the report and further statistics are available in the report data directory.
-
-Results generated by MultiQC collate pipeline QC from supported tools e.g. FastQC. The pipeline has special steps which also allow the software versions to be reported in the MultiQC output for future traceability. For more information about how to use MultiQC reports, see <http://multiqc.info>.
 
 ### Pipeline information
 
@@ -51,11 +121,8 @@ Results generated by MultiQC collate pipeline QC from supported tools e.g. FastQ
 <summary>Output files</summary>
 
 - `pipeline_info/`
-  - Reports generated by Nextflow: `execution_report.html`, `execution_timeline.html`, `execution_trace.txt` and `pipeline_dag.dot`/`pipeline_dag.svg`.
-  - Reports generated by the pipeline: `pipeline_report.html`, `pipeline_report.txt` and `software_versions.yml`. The `pipeline_report*` files will only be present if the `--email` / `--email_on_fail` parameter's are used when running the pipeline.
-  - Reformatted samplesheet files used as input to the pipeline: `samplesheet.valid.csv`.
-  - Parameters used by the pipeline run: `params.json`.
+  - Reports generated by Nextflow: `execution_report.html`, `execution_timeline.html`, `execution_trace.txt`, `pipeline_dag.html`.
+  - `nf-blobpurge_software_mqc_versions.yml`: software versions actually used, collated from every process.
+  - `params_*.json`: parameters used by the pipeline run.
 
 </details>
-
-[Nextflow](https://www.nextflow.io/docs/latest/tracing.html) provides excellent functionality for generating various reports relevant to the running and execution of the pipeline. This will allow you to troubleshoot errors with the running of the pipeline, and also provide you with other information such as launch commands, run times and resource usage.

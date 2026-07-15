@@ -14,49 +14,45 @@
 
 ## Introduction
 
-**cnr-ibba/nf-blobpurge** is a bioinformatics pipeline that ...
+**cnr-ibba/nf-blobpurge** is a bioinformatics pipeline for de novo short-read genome assemblies (e.g. algae) that have already been classified with [sanger-tol/blobtoolkit](https://github.com/sanger-tol/blobtoolkit). Starting from an existing assembly + BlobDir pair (it never regenerates the BlobDir), it removes contaminant contigs, purges uncollapsed heterozygous haplotigs with `purge_dups` (cross-checked independently with `purge_haplotigs`), runs comparative BUSCO across every assembly stage, and produces a single per-sample HTML report with an explicit verdict on whether the size/duplication surplus is explained by heterozygous haplotigs.
 
-<!-- TODO nf-core:
-   Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
-   major pipeline sections and the types of output it produces. You're giving an overview to someone new
-   to nf-core here, in 15-20 seconds. For an example, see https://github.com/nf-core/rnaseq/blob/master/README.md#introduction
--->
+Nothing about a specific organism, taxon, or BUSCO lineage is hardcoded: the taxa to exclude and the BUSCO lineage(s) to run are mandatory parameters with no default.
 
-<!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
-     workflows use the "tube map" design for that. See https://nf-co.re/docs/community/brand/workflow-schematics#examples for examples.   -->
-<!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+1. Remove contaminant contigs from an existing BlobDir, with a programmatic assembly-span conservation check (`BTK_FILTER`)
+2. Compute read coverage for purging: subset an existing reads CRAM, or map FASTQ reads fresh with `bwa-mem2` (`READ_COVERAGE`)
+3. Purge uncollapsed heterozygous haplotigs (`purge_dups`), cross-checked independently and in parallel with `purge_haplotigs`
+4. Run comparative BUSCO (never `--auto-lineage`) across the raw, filtered and purged assemblies
+5. Generate a per-sample HTML report tying span, BUSCO duplication, the GenomeScope2 comparison (if provided) and the purge_dups/purge_haplotigs cross-check together into an explicit verdict
+6. Present QC and software versions for the whole run ([`MultiQC`](http://multiqc.info/))
 
 ## Usage
 
 > [!NOTE]
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.
 
-<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
-
-First, prepare a samplesheet with your input data that looks as follows:
+First, prepare a samplesheet with your input data that looks as follows (see [docs/usage.md](docs/usage.md) for the full column reference):
 
 `samplesheet.csv`:
 
 ```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
+sample_id,assembly,blobdir,reads_cram,reads_r1,reads_r2
+sample1,/data/sample1.assembly.fasta,/data/sample1_blobdir,/data/sample1.reads.cram,,
 ```
 
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
-
--->
+Each row represents one already-assembled, already-blobtoolkit-classified sample: its assembly FASTA, its BlobDir, and either a reads CRAM or a pair of FASTQ files for coverage.
 
 Now, you can run the pipeline using:
-
-<!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
 
 ```bash
 nextflow run cnr-ibba/nf-blobpurge \
    -profile <docker/singularity/.../institute> \
    --input samplesheet.csv \
-   --outdir <OUTDIR>
+   --outdir <OUTDIR> \
+   --exclude_taxa "Pseudomonadota,Bacteroidota,Actinomycetota" \
+   --busco_lineages "chlorophyta_odb12,viridiplantae_odb12"
 ```
+
+`--exclude_taxa` and `--busco_lineages` are mandatory and have no default -- the pipeline fails immediately with an explicit error if either is missing.
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
