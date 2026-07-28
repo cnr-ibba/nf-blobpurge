@@ -9,6 +9,8 @@ Initial release of cnr-ibba/nf-blobpurge, created with the [nf-core](https://nf-
 
 ### `Added`
 
+- HaploMerger2 as a second, independent, opt-in haplotig-purging cross-check (`--run_haplomerger2`, default `false`), running in parallel to `purge_dups`/`purge_haplotigs` on the `BTK_FILTER` output. Unlike the other two methods, it purges by whole-genome self-alignment (LASTZ + UCSC kentUtils) rather than read coverage, so it needs no coverage/BAM input. New params: `--run_haplomerger2`, `--haplomerger2_identity`, `--haplomerger2_path`, `--haplomerger2_container` (mandatory when enabled -- no bioconda/biocontainers image exists for HaploMerger2, see `docs/usage.md`). The purge-method disagreement check in the per-sample report is now pairwise across however many purge methods actually ran (2 or 3), not hardcoded to purge_dups/purge_haplotigs.
+
 ### `Fixed`
 
 ### `Dependencies`

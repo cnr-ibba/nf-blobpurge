@@ -8,15 +8,15 @@ from BUSCO's JSON output -- nothing here is hand-entered.
 
 Each input file must follow the naming convention produced by the BUSCO
 module: `<sample_id>.<stage>.<lineage>.short_summary.json`, where stage is
-one of raw/filtered/purge_dups/purge_haplotigs.
+one of raw/filtered/purge_dups/purge_haplotigs/haplomerger2.
 """
 import argparse
 import json
 import re
 import sys
 
-STAGE_ORDER = ["raw", "filtered", "purge_dups", "purge_haplotigs"]
-FILENAME_RE = re.compile(r"^(?P<sample>.+)\.(?P<stage>raw|filtered|purge_dups|purge_haplotigs)\.(?P<lineage>.+)\.short_summary\.json$")
+STAGE_ORDER = ["raw", "filtered", "purge_dups", "purge_haplotigs", "haplomerger2"]
+FILENAME_RE = re.compile(r"^(?P<sample>.+)\.(?P<stage>raw|filtered|purge_dups|purge_haplotigs|haplomerger2)\.(?P<lineage>.+)\.short_summary\.json$")
 
 
 def load_busco_json(path):
@@ -71,6 +71,8 @@ def main():
             handle.write("\t".join(str(row.get(f, "")) for f in fieldnames) + "\n")
 
     # Duplication drop: filtered -> each later purge stage, per lineage.
+    # "Later purge stage" is generically "every stage after raw/filtered" in
+    # STAGE_ORDER, so a future purge method needs no change here.
     by_lineage_stage = {}
     for row in rows:
         by_lineage_stage.setdefault(row["lineage"], {})[row["stage"]] = row
@@ -79,7 +81,7 @@ def main():
     for lineage, stages in by_lineage_stage.items():
         filtered_dup = stages.get("filtered", {}).get("duplicated_pct")
         duplication_drop[lineage] = {}
-        for purge_stage in ("purge_dups", "purge_haplotigs"):
+        for purge_stage in STAGE_ORDER[2:]:
             purge_dup = stages.get(purge_stage, {}).get("duplicated_pct")
             if filtered_dup is None or purge_dup is None:
                 duplication_drop[lineage][purge_stage] = None

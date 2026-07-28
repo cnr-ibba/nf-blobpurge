@@ -9,11 +9,18 @@ explicitly "not available", never silently dropped.
 """
 import argparse
 import html
+import itertools
 import json
 import re
 import sys
 
-STATS_FILENAME_RE = re.compile(r"^.+\.(?P<stage>raw|filtered|purge_dups|purge_haplotigs)\.stats\.json$")
+STATS_FILENAME_RE = re.compile(r"^.+\.(?P<stage>raw|filtered|purge_dups|purge_haplotigs|haplomerger2)\.stats\.json$")
+
+# Every stage that is itself a purge *method* (as opposed to raw/filtered,
+# which are not purge outputs). Adding a future method (e.g. Redundans) only
+# requires appending it here -- compute_disagreement() and compute_verdict()
+# below already generalize over however many of these actually ran.
+PURGE_STAGES = ("purge_dups", "purge_haplotigs", "haplomerger2")
 
 
 def load_json(path):
@@ -76,6 +83,40 @@ def fmt_pct(x, digits=1):
     return f"{x * 100:.{digits}f}%"
 
 
+def compute_disagreement(stats, disagreement_threshold):
+    """Pairwise span disagreement across every purge method that actually ran.
+
+    Returns None if fewer than 2 purge stages have stats (no cross-check
+    possible), otherwise a dict with the list of stages that ran and one
+    entry per pair, each using the same mean-normalized relative-difference
+    formula as the original purge_dups-vs-purge_haplotigs check.
+    """
+    spans = {s: stats[s]["total_span"] for s in PURGE_STAGES if stats.get(s, {}).get("total_span")}
+    if len(spans) < 2:
+        return None
+
+    pairs = []
+    for a, b in itertools.combinations(spans, 2):
+        mean_span = (spans[a] + spans[b]) / 2
+        rel_diff = abs(spans[a] - spans[b]) / mean_span
+        pairs.append(
+            {
+                "a": a,
+                "b": b,
+                "span_a": spans[a],
+                "span_b": spans[b],
+                "relative_diff": rel_diff,
+                "flagged": rel_diff > disagreement_threshold,
+            }
+        )
+
+    return {
+        "stages": sorted(spans),
+        "pairs": pairs,
+        "any_flagged": any(p["flagged"] for p in pairs),
+    }
+
+
 def compute_verdict(stats, busco_comparison, disagreement, dup_drop_threshold):
     span_filtered = stats.get("filtered", {}).get("total_span")
     span_pd = stats.get("purge_dups", {}).get("total_span")
@@ -91,7 +132,7 @@ def compute_verdict(stats, busco_comparison, disagreement, dup_drop_threshold):
 
     meets_dup_threshold = avg_pd_drop is not None and avg_pd_drop >= dup_drop_threshold
     meets_span_shrink = span_shrink_pd is not None and span_shrink_pd > 0
-    disagree_flag = disagreement is not None and disagreement.get("flagged", False)
+    disagree_flag = disagreement is not None and disagreement.get("any_flagged", False)
 
     if meets_dup_threshold and meets_span_shrink and not disagree_flag:
         verdict = "SI"
@@ -108,7 +149,7 @@ def compute_verdict(stats, busco_comparison, disagreement, dup_drop_threshold):
         if not meets_span_shrink:
             reasons.append("la dimensione dell'assembly non si riduce in modo netto dopo il purging")
         if disagree_flag:
-            reasons.append("purge_dups e purge_haplotigs divergono in modo sostanziale")
+            reasons.append("gli strumenti di purging eseguiti divergono in modo sostanziale tra loro")
         explanation = "Segnali solo parzialmente concordanti: " + "; ".join(reasons) + "."
     else:
         verdict = "NO"
@@ -147,23 +188,18 @@ def main():
     busco_comparison = load_json(args.busco_comparison)
     genomescope = parse_genomescope_summary(args.genomescope_summary)
 
-    span_pd = stats.get("purge_dups", {}).get("total_span")
-    span_ph = stats.get("purge_haplotigs", {}).get("total_span")
-    disagreement = None
-    if span_pd and span_ph:
-        mean_span = (span_pd + span_ph) / 2
-        rel_diff = abs(span_pd - span_ph) / mean_span
-        disagreement = {
-            "purge_dups_span": span_pd,
-            "purge_haplotigs_span": span_ph,
-            "relative_diff": rel_diff,
-            "flagged": rel_diff > args.disagreement_threshold,
-        }
+    disagreement = compute_disagreement(stats, args.disagreement_threshold)
 
     verdict = compute_verdict(stats, busco_comparison, disagreement, args.dup_drop_threshold)
 
-    stage_labels = {"raw": "Originale", "filtered": "Filtrata (BTK_FILTER)", "purge_dups": "Purgata (purge_dups)", "purge_haplotigs": "Purgata (purge_haplotigs)"}
-    stage_order = [s for s in ("raw", "filtered", "purge_dups", "purge_haplotigs") if s in stats]
+    stage_labels = {
+        "raw": "Originale",
+        "filtered": "Filtrata (BTK_FILTER)",
+        "purge_dups": "Purgata (purge_dups)",
+        "purge_haplotigs": "Purgata (purge_haplotigs)",
+        "haplomerger2": "Purgata (HaploMerger2)",
+    }
+    stage_order = [s for s in ("raw", "filtered", *PURGE_STAGES) if s in stats]
 
     span_rows = "".join(
         f"<tr><td>{stage_labels.get(s, s)}</td><td>{fmt_bp(stats[s]['total_span'])}</td>"
@@ -213,23 +249,32 @@ def main():
                 f"({'+' if ratio and ratio > 1 else ''}{fmt_pct((ratio - 1)) if ratio else 'n/a'} rispetto alla stima).</p>"
             )
 
-    disagreement_html = '<p class="warn">purge_haplotigs non eseguito: nessun cross-check disponibile.</p>'
-    if disagreement is not None:
-        flag = disagreement["flagged"]
-        css_class = "warn" if flag else "ok"
-        disagreement_html = (
-            f'<p class="{css_class}">purge_dups: {fmt_bp(disagreement["purge_dups_span"])} vs '
-            f'purge_haplotigs: {fmt_bp(disagreement["purge_haplotigs_span"])} '
-            f'(differenza relativa {fmt_pct(disagreement["relative_diff"])}, soglia {fmt_pct(args.disagreement_threshold)}). '
+    purge_methods_ran = [s for s in PURGE_STAGES if s in stats]
+    methods_html = (
+        f'<p>Metodi di purging eseguiti: <b>{", ".join(stage_labels.get(s, s) for s in purge_methods_ran)}</b>.</p>'
+    )
+
+    if disagreement is None:
+        disagreement_html = methods_html + (
+            '<p class="warn">Un solo metodo di purging eseguito: nessun cross-check di span disponibile.</p>'
         )
-        if flag:
-            disagreement_html += (
-                "I due strumenti divergono in modo sostanziale: da risolvere con dati "
-                "long-read, non arbitrato automaticamente da questa pipeline."
+    else:
+        pair_rows = []
+        for pair in disagreement["pairs"]:
+            css_class = "warn" if pair["flagged"] else "ok"
+            verdict_text = (
+                "Divergenza sostanziale: da risolvere con dati long-read, non arbitrata "
+                "automaticamente da questa pipeline."
+                if pair["flagged"]
+                else "In accordo entro la soglia configurata."
             )
-        else:
-            disagreement_html += "I due strumenti sono in accordo entro la soglia configurata."
-        disagreement_html += "</p>"
+            pair_rows.append(
+                f'<p class="{css_class}">{stage_labels.get(pair["a"], pair["a"])}: {fmt_bp(pair["span_a"])} vs '
+                f'{stage_labels.get(pair["b"], pair["b"])}: {fmt_bp(pair["span_b"])} '
+                f'(differenza relativa {fmt_pct(pair["relative_diff"])}, soglia {fmt_pct(args.disagreement_threshold)}). '
+                f"{verdict_text}</p>"
+            )
+        disagreement_html = methods_html + "".join(pair_rows)
 
     caveats_html = "".join(f"<li>{html.escape(c)}</li>" for c in args.caveats) or "<li>Nessuna nota.</li>"
 
@@ -289,7 +334,7 @@ def main():
 <h2>BUSCO comparativo</h2>
 {''.join(busco_sections)}
 
-<h2>purge_dups vs purge_haplotigs</h2>
+<h2>Confronto tra strumenti di purging</h2>
 {disagreement_html}
 
 <h2>Note e limitazioni</h2>

@@ -9,6 +9,7 @@ include { BLOBPURGE_REPORT        } from '../modules/local/blobpurge_report/main
 include { READ_COVERAGE           } from '../subworkflows/local/read_coverage'
 include { PURGE_DUPS              } from '../subworkflows/local/purge_dups'
 include { PURGE_HAPLOTIGS         } from '../subworkflows/local/purge_haplotigs'
+include { HAPLOMERGER2            } from '../subworkflows/local/haplomerger2'
 include { BUSCO_COMPARE           } from '../subworkflows/local/busco_compare'
 include { MULTIQC                 } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap        } from 'plugin/nf-schema'
@@ -50,6 +51,18 @@ workflow BLOBPURGE {
     )
     ch_versions = ch_versions.mix(BTK_FILTER.out.versions)
     ch_stage_fastas = ch_stage_fastas.mix(BTK_FILTER.out.fasta.map { meta, fasta -> [ meta, 'filtered', fasta ] })
+
+    //
+    // STEP 1b: HaploMerger2 cross-check (optional, independent, no coverage
+    // needed -- forks directly off BTK_FILTER, ahead of/independent from
+    // READ_COVERAGE which only the coverage-based purge methods need)
+    //
+    if (params.run_haplomerger2) {
+        HAPLOMERGER2(BTK_FILTER.out.fasta)
+        ch_versions     = ch_versions.mix(HAPLOMERGER2.out.versions)
+        ch_caveats      = ch_caveats.mix(HAPLOMERGER2.out.caveats)
+        ch_stage_fastas = ch_stage_fastas.mix(HAPLOMERGER2.out.purged_fasta.map { meta, fasta -> [ meta, 'haplomerger2', fasta ] })
+    }
 
     //
     // STEP 2: read coverage for purge_dups (CRAM subset, or fresh bwa-mem2 mapping)

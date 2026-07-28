@@ -98,13 +98,37 @@
             "title": "Haplotig purging options",
             "type": "object",
             "fa_icon": "fas fa-clone",
-            "description": "Options controlling purge_dups and the purge_haplotigs cross-check.",
+            "description": "Options controlling purge_dups and the purge_haplotigs/HaploMerger2 cross-checks.",
             "properties": {
                 "run_purge_haplotigs": {
                     "type": "boolean",
                     "default": true,
                     "description": "Run purge_haplotigs in parallel to purge_dups as an independent cross-check.",
                     "fa_icon": "fas fa-check-double"
+                },
+                "run_haplomerger2": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run HaploMerger2 in parallel to purge_dups (and purge_haplotigs, if enabled) as a second, independent cross-check based on whole-genome self-alignment (LASTZ) rather than read coverage. Off by default: unlike purge_haplotigs, it needs a bespoke container (no bioconda package exists) and is computationally heavier.",
+                    "fa_icon": "fas fa-clone"
+                },
+                "haplomerger2_identity": {
+                    "type": "number",
+                    "default": 80,
+                    "description": "Minimum LASTZ alignment identity (percent) used by HaploMerger2's self-alignment steps. Matches HaploMerger2's own default; per its documentation this normally does not need to be changed.",
+                    "fa_icon": "fas fa-percentage"
+                },
+                "haplomerger2_path": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "Optional path to a local, pre-extracted copy of the HaploMerger2 source distribution. If not given, it is downloaded on demand (mirrors --busco_lineages_path).",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "haplomerger2_container": {
+                    "type": "string",
+                    "description": "Container image to use for the HaploMerger2 modules. No bioconda package or biocontainers image exists for HaploMerger2; this must be a container built separately (e.g. with Seqera Wave from lastz + UCSC kentUtils bioconda packages, see docs/usage.md) and supplied explicitly. Mandatory when --run_haplomerger2 is true.",
+                    "fa_icon": "fas fa-box"
                 }
             }
         },

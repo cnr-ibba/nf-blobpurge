@@ -12,6 +12,7 @@ The pipeline processes each sample through the following stages:
 - [Read coverage](#read-coverage) - CRAM subsetting or bwa-mem2 mapping, feeding purge_dups' `ngscstat`
 - [purge_dups](#purge_dups) - haplotig purging
 - [purge_haplotigs](#purge_haplotigs) - independent cross-check of purge_dups (optional, on by default)
+- [HaploMerger2](#haplomerger2) - second, independent cross-check based on whole-genome self-alignment rather than coverage (optional, off by default)
 - [Assembly stats](#assembly-stats) - span/N50/contig-count at every stage, machine-generated
 - [BUSCO comparison](#busco-comparison) - comparative completeness/duplication across stages and lineages
 - [blobpurge report](#blobpurge-report) - the final per-sample verdict
@@ -73,12 +74,28 @@ Only produced when `--run_purge_haplotigs` is `true` (default).
 
 </details>
 
+### HaploMerger2
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `haplomerger2/`
+  - `<sample_id>.haplomerger2_A.fasta.gz`: Stage A output -- the raw diploid assembly after whole-genome self-alignment and mis-joined-scaffold correction (`hm.batchA1`-`A3`).
+  - `<sample_id>.haplomerger2_stageA.log`: combined log for Stage A.
+  - `<sample_id>.haplomerger2.purged.fasta`: Stage B's reference (kept) haploid assembly (`hm.batchB1`-`B5`) -- the final HaploMerger2 assembly.
+  - `<sample_id>.haplomerger2.haplotigs.fasta`: Stage B's alternative haploid assembly -- contigs/sequences identified as haplotigs.
+  - `<sample_id>.haplomerger2_stageB.log`: combined log for Stage B.
+
+Only produced when `--run_haplomerger2` is `true` (default `false`). Unlike `purge_dups`/`purge_haplotigs`, HaploMerger2 needs no read coverage or BAM at all -- it runs directly on `BTK_FILTER`'s output.
+
+</details>
+
 ### Assembly stats
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `assembly/<sample_id>.<stage>.stats.json`: contig count, total span, N50, longest contig, for `stage` in `raw`, `filtered`, `purge_dups`, `purge_haplotigs`.
+- `assembly/<sample_id>.<stage>.stats.json`: contig count, total span, N50, longest contig, for `stage` in `raw`, `filtered`, `purge_dups`, `purge_haplotigs`, `haplomerger2`.
 
 </details>
 
@@ -93,14 +110,14 @@ Only produced when `--run_purge_haplotigs` is `true` (default).
 
 </details>
 
-Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineage`) against the raw, filtered, purge_dups and (if enabled) purge_haplotigs assemblies.
+Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineage`) against the raw and filtered assemblies, plus every purge stage that actually ran (`purge_dups` always; `purge_haplotigs` and `haplomerger2` if enabled).
 
 ### blobpurge report
 
 <details markdown="1">
 <summary>Output files</summary>
 
-- `analyses/<sample_id>_blobpurge.html`: the final, self-contained per-sample report -- span per stage, the BTK_FILTER span check, the GenomeScope2 comparison (or an explicit "not provided" notice), the BUSCO duplication trend per lineage, the purge_dups vs purge_haplotigs comparison (flagged if they disagree beyond `--purge_disagreement_threshold`), the collected caveats (ngscstat/Illumina path, purge_haplotigs on short-read coverage), and an explicit sì/parzialmente/no verdict on whether uncollapsed heterozygous haplotigs explain the assembly's size/duplication surplus.
+- `analyses/<sample_id>_blobpurge.html`: the final, self-contained per-sample report -- span per stage, the BTK_FILTER span check, the GenomeScope2 comparison (or an explicit "not provided" notice), the BUSCO duplication trend per lineage, a pairwise comparison across every purge method that actually ran (`purge_dups`, and whichever of `purge_haplotigs`/`haplomerger2` are enabled; each pair flagged if they disagree beyond `--purge_disagreement_threshold`), the collected caveats (ngscstat/Illumina path, purge_haplotigs on short-read coverage, HaploMerger2's sensitivity to assembly contiguity/scoring parameters), and an explicit sì/parzialmente/no verdict on whether uncollapsed heterozygous haplotigs explain the assembly's size/duplication surplus.
 
 </details>
 
