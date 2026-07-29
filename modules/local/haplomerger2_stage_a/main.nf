@@ -42,10 +42,20 @@ process HAPLOMERGER2_STAGE_A {
     fi
 
     # faToNib has no bioconda package; reuse HaploMerger2's own bundled
-    # (2010-vintage, statically-built) copy rather than compiling it --
-    # everything else (lastz, UCSC kentUtils chain/net tools) is expected on
-    # PATH already, from the container built per docs/usage.md.
-    export PATH="\$(pwd)/\${HM2_DIR}/chainNet_jksrc20100603_centOS5:\${PATH}"
+    # (2010-vintage, statically-built) copy rather than compiling it. Only
+    # faToNib itself is exposed on PATH (via a dedicated directory), NOT the
+    # whole chainNet_jksrc20100603_centOS5/ directory it ships in -- that
+    # directory also bundles its own ancient axtChain/chainNet/chainAntiRepeat/
+    # etc., and prepending it to PATH silently shadows the modern,
+    # bioconda-installed versions of those tools (from the container built
+    # per docs/usage.md) for the rest of this task. That shadowing doesn't
+    # error -- the old binaries still run and exit 0 -- it just produces
+    # wrong (empty) chain/net data, which only surfaces several steps later
+    # as HM_pathFinder_preparation.pl crashing on what looks like a
+    # too-sparse alignment graph.
+    mkdir -p fatonib_only
+    ln -s "\$(pwd)/\${HM2_DIR}/chainNet_jksrc20100603_centOS5/faToNib" fatonib_only/faToNib
+    export PATH="\$(pwd)/fatonib_only:\${PATH}"
 
     # Diploid assemblies with many scaffolds can exceed the default open
     # file-handle limit during self-alignment (HaploMerger2's own docs
@@ -65,10 +75,20 @@ process HAPLOMERGER2_STAGE_A {
 
     zcat -f ${fasta} | gzip -c > project/${meta.id}.fa.gz
 
+    # Nextflow's own task wrapper runs with 'bash -e -u -o pipefail', which
+    # bash auto-exports as SHELLOPTS -- and HaploMerger2's hm.batch* scripts
+    # are themselves '#!/bin/bash', so a fresh bash process launched for each
+    # one inherits errexit/nounset/pipefail from us. HaploMerger2 was never
+    # written for that (its internal pipelines routinely have a benign
+    # non-zero exit deep in the middle), so inheriting our strictness makes
+    # it silently abort mid-script, well before HM_pathFinder*.pl -- the
+    # actual, misleading-looking failure we'd otherwise see several steps
+    # later. `env -u SHELLOPTS` strips the inherited options so each
+    # hm.batch* script runs with its own, intended (lenient) defaults.
     cd project
-    ./hm.batchA1.initiation_and_all_lastz ${meta.id}  > ../${meta.id}.haplomerger2_stageA.log 2>&1
-    ./hm.batchA2.chainNet_and_netToMaf    ${meta.id} >> ../${meta.id}.haplomerger2_stageA.log 2>&1
-    ./hm.batchA3.misjoin_processing       ${meta.id} >> ../${meta.id}.haplomerger2_stageA.log 2>&1
+    env -u SHELLOPTS ./hm.batchA1.initiation_and_all_lastz ${meta.id}  > ../${meta.id}.haplomerger2_stageA.log 2>&1
+    env -u SHELLOPTS ./hm.batchA2.chainNet_and_netToMaf    ${meta.id} >> ../${meta.id}.haplomerger2_stageA.log 2>&1
+    env -u SHELLOPTS ./hm.batchA3.misjoin_processing       ${meta.id} >> ../${meta.id}.haplomerger2_stageA.log 2>&1
     cd ..
 
     cp project/${meta.id}_A.fa.gz ${meta.id}.haplomerger2_A.fasta.gz

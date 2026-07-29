@@ -26,7 +26,7 @@ Known caveats the pipeline surfaces on purpose (both to stderr and in the report
 ```bash
 nextflow run . -profile test,docker --outdir <OUTDIR>
 ```
-The `test` profile uses the synthetic fixture under `assets/test/` (see `assets/test/generate_test_data.py`) — a 6-contig toy assembly with one intentional near-duplicate contig pair and two "contaminant" contigs, plus matching reads and a hand-built BlobDir. It is a plumbing fixture, not biological data. `conf/test.config` regenerates an absolute-path samplesheet at config-load time (nf-schema resolves samplesheet paths against the launch dir, not the CSV's location).
+The `test` profile uses the synthetic fixture under `assets/test/` (see `assets/test/generate_test_data.py`) — a 9-contig, gzipped toy assembly with two intentional near-duplicate contig pairs and two "contaminant" contigs, plus matching reads and a hand-built BlobDir. It is a plumbing fixture, not biological data. `conf/test.config` regenerates an absolute-path samplesheet at config-load time (nf-schema resolves samplesheet paths against the launch dir, not the CSV's location).
 
 Real runs require the mandatory params:
 ```bash
@@ -38,11 +38,11 @@ nextflow run . -profile docker \
 
 ### Test
 ```bash
-nf-test test --tag test --profile +docker --verbose
+nf-test test --tag pipeline --profile +docker --verbose
 ```
 Update snapshots after intentional output changes:
 ```bash
-nf-test test --tag test --profile +docker --verbose --update-snapshots
+nf-test test --tag pipeline --profile +docker --verbose --update-snapshot
 ```
 There is a single top-level pipeline test, `tests/default.nf.test`, which runs `-profile test` end-to-end and snapshots stable output paths/contents plus the collated versions file. Module/subworkflow-level `.nf.test` files are not currently used in this repo — only nf-core/modules vendored tests exist (ignored by `nf-test.config`).
 

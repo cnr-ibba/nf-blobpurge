@@ -1,5 +1,7 @@
 .nextflow*
 work/
+.nf-test/
+.nf-test.log
 data/
 results/
 .DS_Store

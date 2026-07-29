@@ -25,8 +25,15 @@ process BUSCO {
     def prefix = "${meta.id}.${stage}.${lineage}"
     def offline_args = busco_lineages_path ? "--offline --download_path ${busco_lineages_path}" : ''
     """
+    # BUSCO (via Biopython's SeqIO) does not auto-detect gzip, unlike this
+    # pipeline's own bin/*.py scripts -- decompress unconditionally (zcat -f
+    # passes plain FASTA through unchanged) so every stage's input works
+    # regardless of whether the upstream stage happens to emit gzipped
+    # FASTA (e.g. the 'raw' stage, straight from the samplesheet).
+    zcat -f ${fasta} > ${prefix}.busco_input.fasta
+
     busco \\
-        -i ${fasta} \\
+        -i ${prefix}.busco_input.fasta \\
         -o ${prefix} \\
         -l ${lineage} \\
         -m genome \\

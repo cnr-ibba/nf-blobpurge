@@ -10,3 +10,21 @@ multiqc/multiqc_plots/{svg,pdf,png}/*.{svg,pdf,png}
 multiqc/multiqc_report.html
 fastqc/*_fastqc.{html,zip}
 pipeline_info/*.{html,json,txt,yml}
+
+# BUSCO's own short_summary.json/logs/per-marker hmmsearch output embed the
+# absolute Nextflow task work-dir path (out_path/download_path/in/
+# lineage_dataset fields, HMMER's own "# query:"/"# target:" header lines),
+# which is unique per run by construction -- these will never match
+# byte-for-byte between separate runs even though the underlying BUSCO
+# results are identical. The derived, path-free outputs downstream
+# (compare/*.busco_comparison.{tsv,json}, the per-sample report) are stable
+# and are not excluded.
+busco/**
+
+# purge_haplotigs hist writes its per-contig coverage blocks in
+# non-reproducible order across runs (confirmed: the numeric depth values
+# are identical, only the block order differs -- not fixed by pinning
+# threads to 1, so it isn't a parallelism race). Not itself consumed
+# downstream except by PURGEHAPLOTIGS_ESTIMATE_CUTOFFS, whose own output
+# (cutoffs.json) is stable.
+purgehaplotigs/*.bam.200.gencov

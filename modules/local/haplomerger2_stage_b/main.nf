@@ -37,7 +37,13 @@ process HAPLOMERGER2_STAGE_B {
         HM2_DIR="${hm2_dir}"
     fi
 
-    export PATH="\$(pwd)/\${HM2_DIR}/chainNet_jksrc20100603_centOS5:\${PATH}"
+    # See HAPLOMERGER2_STAGE_A: only faToNib itself goes on PATH, not the
+    # whole chainNet_jksrc20100603_centOS5/ directory -- that directory also
+    # bundles its own ancient axtChain/chainNet/etc., which would otherwise
+    # silently shadow the modern bioconda-installed versions for this task.
+    mkdir -p fatonib_only
+    ln -s "\$(pwd)/\${HM2_DIR}/chainNet_jksrc20100603_centOS5/faToNib" fatonib_only/faToNib
+    export PATH="\$(pwd)/fatonib_only:\${PATH}"
     ulimit -n 65535 2>/dev/null || true
 
     mkdir -p bin project
@@ -51,12 +57,18 @@ process HAPLOMERGER2_STAGE_B {
 
     zcat -f ${fasta} | gzip -c > project/${name}.fa.gz
 
+    # See HAPLOMERGER2_STAGE_A: Nextflow's task wrapper runs with
+    # 'bash -e -u -o pipefail', auto-exported as SHELLOPTS, which
+    # HaploMerger2's own '#!/bin/bash' hm.batch* scripts would otherwise
+    # inherit -- and HaploMerger2 was never written to tolerate that
+    # strictness. `env -u SHELLOPTS` strips it so each script runs with its
+    # own intended (lenient) defaults.
     cd project
-    ./hm.batchB1.initiation_and_all_lastz            ${name}  > ../${meta.id}.haplomerger2_stageB.log 2>&1
-    ./hm.batchB2.chainNet_and_netToMaf               ${name} >> ../${meta.id}.haplomerger2_stageB.log 2>&1
-    ./hm.batchB3.haplomerger                         ${name} >> ../${meta.id}.haplomerger2_stageB.log 2>&1
-    ./hm.batchB4.refine_unpaired_sequences           ${name} >> ../${meta.id}.haplomerger2_stageB.log 2>&1
-    ./hm.batchB5.merge_paired_and_unpaired_sequences ${name} >> ../${meta.id}.haplomerger2_stageB.log 2>&1
+    env -u SHELLOPTS ./hm.batchB1.initiation_and_all_lastz            ${name}  > ../${meta.id}.haplomerger2_stageB.log 2>&1
+    env -u SHELLOPTS ./hm.batchB2.chainNet_and_netToMaf               ${name} >> ../${meta.id}.haplomerger2_stageB.log 2>&1
+    env -u SHELLOPTS ./hm.batchB3.haplomerger                         ${name} >> ../${meta.id}.haplomerger2_stageB.log 2>&1
+    env -u SHELLOPTS ./hm.batchB4.refine_unpaired_sequences           ${name} >> ../${meta.id}.haplomerger2_stageB.log 2>&1
+    env -u SHELLOPTS ./hm.batchB5.merge_paired_and_unpaired_sequences ${name} >> ../${meta.id}.haplomerger2_stageB.log 2>&1
     cd ..
 
     zcat project/${name}_ref.fa.gz > ${meta.id}.haplomerger2.purged.fasta
