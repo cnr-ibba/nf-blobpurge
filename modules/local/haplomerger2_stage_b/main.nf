@@ -62,6 +62,20 @@ process HAPLOMERGER2_STAGE_B {
     zcat project/${name}_ref.fa.gz > ${meta.id}.haplomerger2.purged.fasta
     zcat project/${name}_alt.fa.gz > ${meta.id}.haplomerger2.haplotigs.fasta
 
+    # hm.batchB3-B5's own internal pipelines have no errexit/pipefail, so a
+    # crash partway through (e.g. HM_pathFinder*.pl/XHM_haploMerger.pl dying
+    # on a too-sparse alignment graph) still leaves these scripts exiting 0
+    # with empty/corrupt output. An empty *reference* assembly is never a
+    # legitimate outcome (unlike an empty haplotigs file, which just means no
+    # haplotigs were found) -- catch it here instead of failing confusingly
+    # several steps downstream (e.g. in BUSCO).
+    if ! grep -q '^>' ${meta.id}.haplomerger2.purged.fasta; then
+        echo "ERROR: HaploMerger2 Stage B (hm.batchB1-B5) produced no usable reference assembly for sample '${meta.id}'." >&2
+        echo "This is usually HM_pathFinder_preparation.pl/HM_pathFinder.pl/XHM_haploMerger.pl failing on a too-sparse self-alignment graph (too few/short scaffolds), not a configuration error." >&2
+        echo "Inspect ${meta.id}.haplomerger2_stageB.log and, in the task work dir, project/*.result/_B3.*.log for the root cause." >&2
+        exit 1
+    fi
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         haplomerger2: \$(echo "${hm2_release}" | sed 's/HaploMerger2_//')

@@ -73,6 +73,18 @@ process HAPLOMERGER2_STAGE_A {
 
     cp project/${meta.id}_A.fa.gz ${meta.id}.haplomerger2_A.fasta.gz
 
+    # hm.batchA3's own internal pipeline (perl | perl | gzip) has no
+    # errexit/pipefail, so a crash partway through (e.g. HM_pathFinder*.pl
+    # dying on a too-sparse alignment graph) still leaves this script exiting
+    # 0 with an empty/corrupt output -- catch that here instead of silently
+    # emitting garbage that would fail confusingly several steps downstream.
+    if ! zcat ${meta.id}.haplomerger2_A.fasta.gz 2>/dev/null | grep -q '^>'; then
+        echo "ERROR: HaploMerger2 Stage A (hm.batchA1-A3) produced no usable sequence for sample '${meta.id}'." >&2
+        echo "This is usually HM_pathFinder_preparation.pl/HM_pathFinder.pl failing on a too-sparse self-alignment graph (too few/short scaffolds), not a configuration error." >&2
+        echo "Inspect ${meta.id}.haplomerger2_stageA.log and, in the task work dir, project/*.result/_A3.*.log for the root cause." >&2
+        exit 1
+    fi
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         haplomerger2: \$(echo "${hm2_release}" | sed 's/HaploMerger2_//')
