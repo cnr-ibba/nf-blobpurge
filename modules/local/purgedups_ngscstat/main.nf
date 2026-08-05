@@ -31,7 +31,7 @@ process PURGEDUPS_NGSCSTAT {
     mv TX.stat ${meta.id}.ngscstat.stat
     mv TX.base.cov ${meta.id}.ngscstat.base.cov
 
-    CAVEAT="Coverage per purge_dups e' stata calcolata con ngscstat (percorso Illumina/short-read): questo percorso e' meno testato dagli sviluppatori di purge_dups rispetto al percorso PacBio standard (pbcstat) e va considerato con maggiore cautela."
+    CAVEAT="Coverage for purge_dups was computed with ngscstat (Illumina/short-read path): this path is less exercised by the purge_dups authors than the standard PacBio path (pbcstat) and should be treated with more caution."
     echo "\${CAVEAT}" >&2
 
     cat <<-END_VERSIONS > versions.yml

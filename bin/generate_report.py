@@ -94,29 +94,29 @@ def compute_verdict(stats, busco_comparison, disagreement, dup_drop_threshold):
     disagree_flag = disagreement is not None and disagreement.get("flagged", False)
 
     if meets_dup_threshold and meets_span_shrink and not disagree_flag:
-        verdict = "SI"
+        verdict = "YES"
         explanation = (
-            "La riduzione di duplicazione BUSCO e la contrazione della dimensione "
-            "dell'assembly dopo il purging sono coerenti con aplotidi eterozigoti "
-            "non collassati come causa principale del surplus."
+            "The BUSCO duplication reduction and the assembly size contraction "
+            "after purging are consistent with uncollapsed heterozygous haplotigs "
+            "as the main cause of the surplus."
         )
     elif (avg_pd_drop and avg_pd_drop > 0) or meets_span_shrink or disagree_flag:
-        verdict = "PARZIALMENTE"
+        verdict = "PARTIAL"
         reasons = []
         if not meets_dup_threshold:
-            reasons.append(f"il calo di duplicazione BUSCO ({fmt_pct(avg_pd_drop)}) non raggiunge la soglia ({fmt_pct(dup_drop_threshold)})")
+            reasons.append(f"the BUSCO duplication drop ({fmt_pct(avg_pd_drop)}) does not reach the threshold ({fmt_pct(dup_drop_threshold)})")
         if not meets_span_shrink:
-            reasons.append("la dimensione dell'assembly non si riduce in modo netto dopo il purging")
+            reasons.append("the assembly size does not shrink markedly after purging")
         if disagree_flag:
-            reasons.append("purge_dups e purge_haplotigs divergono in modo sostanziale")
-        explanation = "Segnali solo parzialmente concordanti: " + "; ".join(reasons) + "."
+            reasons.append("purge_dups and purge_haplotigs diverge substantially")
+        explanation = "Only partially concordant signals: " + "; ".join(reasons) + "."
     else:
         verdict = "NO"
         explanation = (
-            "Ne il calo di duplicazione BUSCO ne la contrazione della dimensione "
-            "dell'assembly supportano l'ipotesi di aplotidi eterozigoti non collassati "
-            "come causa principale del surplus; considerare altre fonti (contaminazione "
-            "residua, ripetizioni, eterogeneita' dell'assembly)."
+            "Neither the BUSCO duplication drop nor the assembly size contraction "
+            "support the hypothesis of uncollapsed heterozygous haplotigs as the "
+            "main cause of the surplus; consider other sources (residual "
+            "contamination, repeats, assembly heterogeneity)."
         )
 
     return {
@@ -162,7 +162,7 @@ def main():
 
     verdict = compute_verdict(stats, busco_comparison, disagreement, args.dup_drop_threshold)
 
-    stage_labels = {"raw": "Originale", "filtered": "Filtrata (BTK_FILTER)", "purge_dups": "Purgata (purge_dups)", "purge_haplotigs": "Purgata (purge_haplotigs)"}
+    stage_labels = {"raw": "Original", "filtered": "Filtered (BTK_FILTER)", "purge_dups": "Purged (purge_dups)", "purge_haplotigs": "Purged (purge_haplotigs)"}
     stage_order = [s for s in ("raw", "filtered", "purge_dups", "purge_haplotigs") if s in stats]
 
     span_rows = "".join(
@@ -192,60 +192,60 @@ def main():
         <h3>Lineage: {html.escape(lineage)}</h3>
         <div class="chart">{bar_svg(chart_rows, 'value', 'label', 100, color='#d1495b')}</div>
         <table>
-        <thead><tr><th>Stadio</th><th>Complete</th><th>Single</th><th>Duplicated</th><th>Fragmented</th><th>Missing</th><th># marker</th></tr></thead>
+        <thead><tr><th>Stage</th><th>Complete</th><th>Single</th><th>Duplicated</th><th>Fragmented</th><th>Missing</th><th># markers</th></tr></thead>
         <tbody>{table_rows}</tbody>
         </table>
         """)
 
     if genomescope is None:
-        genomescope_html = '<p class="warn">GenomeScope2 non fornito (--genomescope_summary assente): confronto con la stima k-mer NON disponibile.</p>'
+        genomescope_html = '<p class="warn">GenomeScope2 not provided (--genomescope_summary absent): comparison with the k-mer estimate is NOT available.</p>'
     else:
         hap_len = genomescope.get("haploid_length_bp")
         if hap_len is None:
-            genomescope_html = '<p class="warn">GenomeScope2 fornito, ma la stima "Genome Haploid Length" non e stata trovata nel summary.txt.</p>'
+            genomescope_html = '<p class="warn">GenomeScope2 provided, but the "Genome Haploid Length" estimate was not found in summary.txt.</p>'
         else:
             final_span = stats.get("purge_dups", stats.get("filtered", {})).get("total_span")
             ratio = final_span / hap_len if final_span and hap_len else None
             genomescope_html = (
-                f"<p>Stima GenomeScope2 (aploide): <b>{fmt_bp(hap_len)}</b> "
+                f"<p>GenomeScope2 estimate (haploid): <b>{fmt_bp(hap_len)}</b> "
                 f"(range {fmt_bp(genomescope['haploid_length_range'][0])} - {fmt_bp(genomescope['haploid_length_range'][1])}).<br/>"
-                f"Assembly purgata (purge_dups): <b>{fmt_bp(final_span)}</b> "
-                f"({'+' if ratio and ratio > 1 else ''}{fmt_pct((ratio - 1)) if ratio else 'n/a'} rispetto alla stima).</p>"
+                f"Purged assembly (purge_dups): <b>{fmt_bp(final_span)}</b> "
+                f"({'+' if ratio and ratio > 1 else ''}{fmt_pct((ratio - 1)) if ratio else 'n/a'} relative to the estimate).</p>"
             )
 
-    disagreement_html = '<p class="warn">purge_haplotigs non eseguito: nessun cross-check disponibile.</p>'
+    disagreement_html = '<p class="warn">purge_haplotigs not run: no cross-check available.</p>'
     if disagreement is not None:
         flag = disagreement["flagged"]
         css_class = "warn" if flag else "ok"
         disagreement_html = (
             f'<p class="{css_class}">purge_dups: {fmt_bp(disagreement["purge_dups_span"])} vs '
             f'purge_haplotigs: {fmt_bp(disagreement["purge_haplotigs_span"])} '
-            f'(differenza relativa {fmt_pct(disagreement["relative_diff"])}, soglia {fmt_pct(args.disagreement_threshold)}). '
+            f'(relative difference {fmt_pct(disagreement["relative_diff"])}, threshold {fmt_pct(args.disagreement_threshold)}). '
         )
         if flag:
             disagreement_html += (
-                "I due strumenti divergono in modo sostanziale: da risolvere con dati "
-                "long-read, non arbitrato automaticamente da questa pipeline."
+                "The two tools diverge substantially: this should be resolved with "
+                "long-read data, not arbitrated automatically by this pipeline."
             )
         else:
-            disagreement_html += "I due strumenti sono in accordo entro la soglia configurata."
+            disagreement_html += "The two tools agree within the configured threshold."
         disagreement_html += "</p>"
 
-    caveats_html = "".join(f"<li>{html.escape(c)}</li>" for c in args.caveats) or "<li>Nessuna nota.</li>"
+    caveats_html = "".join(f"<li>{html.escape(c)}</li>" for c in args.caveats) or "<li>No caveats.</li>"
 
     span_check_class = "ok" if span_check["pass"] else "fail"
     span_check_html = (
-        f'<p class="{span_check_class}">span(filtrata) + span(esclusi da BlobDir) = '
+        f'<p class="{span_check_class}">span(filtered) + span(excluded from BlobDir) = '
         f'{fmt_bp(span_check["filtered_span"])} + {fmt_bp(span_check["excluded_span_from_blobdir"])} = '
-        f'{fmt_bp(span_check["reconstructed_span"])}, vs span(originale) {fmt_bp(span_check["original_span"])} '
-        f'(diff relativa {fmt_pct(span_check["relative_diff"])}, tolleranza {fmt_pct(span_check["tolerance"])}). '
-        f'{"OK" if span_check["pass"] else "FALLITO"}</p>'
+        f'{fmt_bp(span_check["reconstructed_span"])}, vs span(original) {fmt_bp(span_check["original_span"])} '
+        f'(relative diff {fmt_pct(span_check["relative_diff"])}, tolerance {fmt_pct(span_check["tolerance"])}). '
+        f'{"OK" if span_check["pass"] else "FAILED"}</p>'
     )
 
-    verdict_class = {"SI": "ok", "PARZIALMENTE": "warn", "NO": "fail"}[verdict["verdict"]]
+    verdict_class = {"YES": "ok", "PARTIAL": "warn", "NO": "fail"}[verdict["verdict"]]
 
     html_doc = f"""<!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <title>blobpurge report - {html.escape(args.sample_id)}</title>
@@ -269,33 +269,33 @@ def main():
 <body>
 <h1>blobpurge report &mdash; {html.escape(args.sample_id)}</h1>
 
-<h2>Verdetto</h2>
+<h2>Verdict</h2>
 <div class="verdict-box {verdict_class}">
   <b>{verdict['verdict']}</b> &mdash; {html.escape(verdict['explanation'])}
 </div>
 
-<h2>Span dell'assembly per stadio</h2>
+<h2>Assembly span per stage</h2>
 <table>
-<thead><tr><th>Stadio</th><th>Span totale</th><th># contig</th><th>N50</th></tr></thead>
+<thead><tr><th>Stage</th><th>Total span</th><th># contigs</th><th>N50</th></tr></thead>
 <tbody>{span_rows}</tbody>
 </table>
 
-<h3>Verifica di conservazione dello span (BTK_FILTER)</h3>
+<h3>Span-conservation check (BTK_FILTER)</h3>
 {span_check_html}
 
-<h2>Confronto con GenomeScope2</h2>
+<h2>Comparison with GenomeScope2</h2>
 {genomescope_html}
 
-<h2>BUSCO comparativo</h2>
+<h2>Comparative BUSCO</h2>
 {''.join(busco_sections)}
 
 <h2>purge_dups vs purge_haplotigs</h2>
 {disagreement_html}
 
-<h2>Note e limitazioni</h2>
+<h2>Notes and caveats</h2>
 <div class="caveats"><ul>{caveats_html}</ul></div>
 
-<p style="color:#666; font-size:.85rem; margin-top:3rem;">Generato automaticamente dalla pipeline blobpurge. Tutti i numeri sopra sono letti dagli output dei processi a monte (nessun valore inserito manualmente).</p>
+<p style="color:#666; font-size:.85rem; margin-top:3rem;">Automatically generated by the blobpurge pipeline. Every number above is read from upstream processes' own outputs (nothing is hand-entered).</p>
 </body>
 </html>
 """

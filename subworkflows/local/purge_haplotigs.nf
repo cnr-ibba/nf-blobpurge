@@ -28,7 +28,7 @@ workflow PURGE_HAPLOTIGS {
 
     ch_caveats = ch_caveats.mix(
         ch_bam.map { meta, bam, bai ->
-            [ meta, "purge_haplotigs cross-check per '${meta.id}' e' stato eseguito sulla stessa copertura usata per purge_dups (tipicamente short-read Illumina): purge_haplotigs e' pensato e documentato principalmente per copertura long-read, va quindi considerato un cross-check indicativo, non equivalente al suo uso standard." ]
+            [ meta, "purge_haplotigs cross-check for '${meta.id}' was run on the same coverage used for purge_dups (typically short-read Illumina): purge_haplotigs is designed and documented primarily for long-read coverage, so this should be considered an indicative cross-check, not equivalent to its standard use case." ]
         }
     )
 

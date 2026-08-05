@@ -103,7 +103,7 @@ Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineag
 <details markdown="1">
 <summary>Output files</summary>
 
-- `analyses/<sample_id>_blobpurge.html`: the final, self-contained per-sample report -- span per stage, the BTK_FILTER span check, the GenomeScope2 comparison (or an explicit "not provided" notice), the BUSCO duplication trend per lineage, the purge_dups vs purge_haplotigs comparison (flagged if they disagree beyond `--purge_disagreement_threshold`), the collected caveats (ngscstat/Illumina path, purge_haplotigs on short-read coverage), and an explicit sì/parzialmente/no verdict on whether uncollapsed heterozygous haplotigs explain the assembly's size/duplication surplus.
+- `analyses/<sample_id>_blobpurge.html`: the final, self-contained per-sample report -- span per stage, the BTK_FILTER span check, the GenomeScope2 comparison (or an explicit "not provided" notice), the BUSCO duplication trend per lineage, the purge_dups vs purge_haplotigs comparison (flagged if they disagree beyond `--purge_disagreement_threshold`), the collected caveats (ngscstat/Illumina path, purge_haplotigs on short-read coverage), and an explicit yes/partial/no verdict on whether uncollapsed heterozygous haplotigs explain the assembly's size/duplication surplus.
 
 </details>
 
