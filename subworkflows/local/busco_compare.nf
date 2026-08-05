@@ -14,7 +14,7 @@ workflow BUSCO_COMPARE {
     main:
     ch_versions = Channel.empty()
 
-    ch_lineages = Channel.of(*params.busco_lineages.tokenize(','))
+    ch_lineages = Channel.fromList(params.busco_lineages.tokenize(','))
 
     ch_busco_lineages_path = params.busco_lineages_path
         ? Channel.fromPath(params.busco_lineages_path, checkIfExists: true).collect()

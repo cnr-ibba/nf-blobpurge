@@ -19,7 +19,7 @@ process PURGEDUPS_NGSCSTAT {
     output:
     tuple val(meta), path("${meta.id}.ngscstat.stat"),     emit: stat
     tuple val(meta), path("${meta.id}.ngscstat.base.cov"), emit: base_cov
-    tuple val(meta), env(CAVEAT),                          emit: caveat
+    tuple val(meta), env('CAVEAT'),                        emit: caveat
     path "versions.yml",                                   emit: versions
 
     when:

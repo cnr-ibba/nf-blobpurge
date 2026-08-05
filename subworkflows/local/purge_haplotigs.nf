@@ -10,8 +10,6 @@
 // logged as a caveat rather than presented as an equivalent use case.
 //
 
-import groovy.json.JsonSlurper
-
 include { SAMTOOLS_DEPTH                   } from '../../modules/local/samtools_depth/main'
 include { PURGEHAPLOTIGS_ESTIMATE_CUTOFFS  } from '../../modules/local/purgehaplotigs_estimate_cutoffs/main'
 include { PURGEHAPLOTIGS_HIST              } from '../../modules/local/purgehaplotigs_hist/main'
@@ -50,7 +48,7 @@ workflow PURGE_HAPLOTIGS {
     PURGEHAPLOTIGS_HIST.out.gencov
         .join(PURGEHAPLOTIGS_ESTIMATE_CUTOFFS.out.cutoffs)
         .map { meta, gencov, cutoffs_json ->
-            def cutoffs = new JsonSlurper().parse(cutoffs_json)
+            def cutoffs = new groovy.json.JsonSlurper().parse(cutoffs_json)
             [ meta, gencov, cutoffs.low, cutoffs.mid, cutoffs.high ]
         }
         .set { ch_for_cov }
