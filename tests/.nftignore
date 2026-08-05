@@ -10,3 +10,18 @@ multiqc/multiqc_plots/{svg,pdf,png}/*.{svg,pdf,png}
 multiqc/multiqc_report.html
 fastqc/*_fastqc.{html,zip}
 pipeline_info/*.{html,json,txt,yml}
+
+# BUSCO's own diagnostic output embeds the absolute Nextflow work-directory
+# path and a wall-clock timestamp (hmmsearch's .out footer: "Query file:",
+# "Current dir:", "# Date:"; short_summary's "Summarized benchmarking ...
+# for file <path>" header), so these can never be byte-identical between
+# two separate runs, regardless of container engine or code changes.
+# Existence/path stability is still covered by stable_path.
+busco/*_busco/**
+busco/*.short_summary.json
+busco/short_summary.*.txt
+
+# purge_haplotigs' per-base coverage histogram is not reproducible
+# byte-for-byte across runs (observed to drift across two consecutive
+# docker runs with identical inputs/code).
+purgehaplotigs/*.bam.200.gencov
