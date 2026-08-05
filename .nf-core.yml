@@ -1,8 +1,12 @@
 repository_type: pipeline
 
-nf_core_version: 4.0.2
+nf_core_version: 4.1.0
 
 lint:
+  # This pipeline is not hosted on nf-core/configs (org: cnr-ibba, is_nfcore: false), so the
+  # pipeline-specific includeConfig line in nextflow.config is deliberately left commented out --
+  # uncommenting it would make every run fetch a nonexistent remote config and fail.
+  included_configs: false
   files_unchanged:
     - CODE_OF_CONDUCT.md
     - assets/nf-core-nf-blobpurge_logo_light.png
@@ -25,6 +29,8 @@ lint:
     - .github/ISSUE_TEMPLATE/config.yml
     - .github/workflows/awstest.yml
     - .github/workflows/awsfulltest.yml
+    - conf/igenomes.config
+    - conf/igenomes_ignored.config
 
 template:
   org: cnr-ibba
