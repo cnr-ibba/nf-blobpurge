@@ -36,8 +36,9 @@ workflow BUSCO_COMPARE {
     ch_versions = ch_versions.mix(COMPARE_BUSCO.out.versions)
 
     emit:
-    short_summaries = BUSCO.out.short_summary
-    comparison_tsv  = COMPARE_BUSCO.out.tsv
-    comparison_json = COMPARE_BUSCO.out.json
-    versions        = ch_versions
+    short_summaries     = BUSCO.out.short_summary
+    short_summaries_txt = BUSCO.out.short_summary_txt
+    comparison_tsv      = COMPARE_BUSCO.out.tsv
+    comparison_json     = COMPARE_BUSCO.out.json
+    versions            = ch_versions
 }

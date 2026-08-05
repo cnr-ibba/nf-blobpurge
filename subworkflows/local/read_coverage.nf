@@ -15,6 +15,7 @@ include { BWAMEM2_INDEX       } from '../../modules/local/bwamem2_index/main'
 include { BWAMEM2_MEM         } from '../../modules/local/bwamem2_mem/main'
 include { SAMTOOLS_SORT_INDEX } from '../../modules/local/samtools_sort_index/main'
 include { SAMTOOLS_SORT_NAME  } from '../../modules/local/samtools_sort_name/main'
+include { SAMTOOLS_STATS      } from '../../modules/local/samtools_stats/main'
 include { PURGEDUPS_NGSCSTAT  } from '../../modules/local/purgedups_ngscstat/main'
 
 workflow READ_COVERAGE {
@@ -77,10 +78,22 @@ workflow READ_COVERAGE {
     ch_versions = ch_versions.mix(PURGEDUPS_NGSCSTAT.out.versions)
     ch_caveats  = ch_caveats.mix(PURGEDUPS_NGSCSTAT.out.caveat)
 
+    //
+    // QC-only: mapping-rate/insert-size/per-contig stats for MultiQC, on
+    // whichever BAM was produced (CRAM subset or fresh bwa-mem2 mapping).
+    //
+    SAMTOOLS_STATS(ch_bam)
+    ch_versions = ch_versions.mix(SAMTOOLS_STATS.out.versions)
+
+    ch_multiqc_files = SAMTOOLS_STATS.out.stats.map { _meta, f -> f }
+        .mix(SAMTOOLS_STATS.out.flagstat.map { _meta, f -> f })
+        .mix(SAMTOOLS_STATS.out.idxstats.map { _meta, f -> f })
+
     emit:
-    stat     = PURGEDUPS_NGSCSTAT.out.stat
-    base_cov = PURGEDUPS_NGSCSTAT.out.base_cov
-    bam      = ch_bam
-    caveats  = ch_caveats
-    versions = ch_versions
+    stat          = PURGEDUPS_NGSCSTAT.out.stat
+    base_cov      = PURGEDUPS_NGSCSTAT.out.base_cov
+    bam           = ch_bam
+    caveats       = ch_caveats
+    multiqc_files = ch_multiqc_files
+    versions      = ch_versions
 }

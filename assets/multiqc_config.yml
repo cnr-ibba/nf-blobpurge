@@ -12,3 +12,11 @@ report_section_order:
 export_plots: true
 
 disable_version_detection: true
+
+# BUSCO short_summary files are named "short_summary.<sample>.<stage>.<lineage>.txt"
+# (see modules/local/busco/main.nf) so the "short_summary." prefix must be
+# stripped explicitly -- MultiQC's default fn_clean_trim only strips the
+# older BUSCO v3/v4 "short_summary_" (underscore) naming.
+extra_fn_clean_exts:
+  - type: remove
+    pattern: "short_summary."

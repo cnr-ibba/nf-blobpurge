@@ -65,6 +65,7 @@ workflow BLOBPURGE {
     READ_COVERAGE(ch_for_coverage)
     ch_versions = ch_versions.mix(READ_COVERAGE.out.versions)
     ch_caveats  = ch_caveats.mix(READ_COVERAGE.out.caveats)
+    ch_multiqc_files = ch_multiqc_files.mix(READ_COVERAGE.out.multiqc_files)
 
     //
     // STEP 3: purge_dups (always run)
@@ -104,7 +105,7 @@ workflow BLOBPURGE {
     BUSCO_COMPARE(ch_stage_fastas)
     ch_versions = ch_versions.mix(BUSCO_COMPARE.out.versions)
     ch_multiqc_files = ch_multiqc_files.mix(
-        BUSCO_COMPARE.out.short_summaries.map { _meta, _stage, _lineage, summary -> summary }
+        BUSCO_COMPARE.out.short_summaries_txt.map { _meta, _stage, _lineage, summary -> summary }
     )
 
     //
