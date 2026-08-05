@@ -69,6 +69,7 @@ def main():
     parser.add_argument("--tolerance", type=float, default=0.001, help="Max relative discrepancy allowed")
     parser.add_argument("--sample-id", required=True)
     parser.add_argument("--output-json", required=True)
+    parser.add_argument("--output-mqc-json", required=True, help="MultiQC custom-content JSON path")
     args = parser.parse_args()
 
     exclude_taxa = {t.strip() for t in args.exclude_taxa.split(",") if t.strip()}
@@ -136,6 +137,33 @@ def main():
 
     with open(args.output_json, "w") as handle:
         json.dump(report, handle, indent=2)
+
+    mqc = {
+        "id": "btk_filter_span_check",
+        "section_name": "Contamination filtering (span check)",
+        "description": (
+            "Programmatic check that span(filtered) + span(excluded, from the BlobDir) "
+            "equals span(original), within --span_tolerance."
+        ),
+        "plot_type": "table",
+        "pconfig": {
+            "id": "btk_filter_span_check_table",
+            "title": "BTK_FILTER span check",
+            "namespace": "BTK Filter",
+        },
+        "data": {
+            args.sample_id: {
+                "Sample": args.sample_id,
+                "Pass": "Yes" if passed else "No",
+                "Original span (bp)": original_span,
+                "Filtered span (bp)": filtered_span,
+                "Excluded span (bp)": excluded_span,
+                "Relative diff": relative_diff,
+            }
+        },
+    }
+    with open(args.output_mqc_json, "w") as handle:
+        json.dump(mqc, handle, indent=2)
 
     with open("retained_ids.txt", "w") as handle:
         handle.write("\n".join(retained_ids) + ("\n" if retained_ids else ""))

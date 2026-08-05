@@ -15,6 +15,7 @@ process BTK_FILTER {
     tuple val(meta), path("retained_ids.txt"),             emit: retained_ids
     tuple val(meta), path("excluded_ids.txt"),             emit: excluded_ids
     tuple val(meta), path("${meta.id}.span_check.json"),   emit: span_check
+    tuple val(meta), path("${meta.id}.span_check_mqc.json"), emit: span_check_mqc
     tuple val(meta), path("${meta.id}.filter_summary.json"), emit: filter_summary
     path "versions.yml",                                   emit: versions
 
@@ -75,7 +76,8 @@ process BTK_FILTER {
         --exclude-taxa "${exclude_taxa}" \\
         --tolerance ${span_tolerance} \\
         --sample-id ${meta.id} \\
-        --output-json ${prefix}.span_check.json
+        --output-json ${prefix}.span_check.json \\
+        --output-mqc-json ${prefix}.span_check_mqc.json
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -91,6 +93,7 @@ process BTK_FILTER {
     echo "ctg1" > retained_ids.txt
     echo "ctg2" > excluded_ids.txt
     echo '{"sample_id":"${meta.id}","pass":true,"original_span":8,"filtered_span":4,"excluded_span_from_blobdir":4,"reconstructed_span":8,"relative_diff":0.0,"tolerance":0.001}' > ${meta.id}.span_check.json
+    echo '{"id":"btk_filter_span_check","plot_type":"table","data":{"${meta.id}":{"Sample":"${meta.id}","Pass":"Yes"}}}' > ${meta.id}.span_check_mqc.json
     echo '{}' > ${prefix}.filter_summary.json
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

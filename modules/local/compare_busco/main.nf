@@ -15,6 +15,7 @@ process COMPARE_BUSCO {
     output:
     tuple val(meta), path("${meta.id}.busco_comparison.tsv"),  emit: tsv
     tuple val(meta), path("${meta.id}.busco_comparison.json"), emit: json
+    tuple val(meta), path("${meta.id}.busco_comparison_mqc.json"), emit: mqc
     path "versions.yml", emit: versions
 
     when:
@@ -27,7 +28,8 @@ process COMPARE_BUSCO {
         ${summaries} \\
         --dup-drop-threshold ${params.busco_dup_drop_threshold} \\
         --output-tsv ${meta.id}.busco_comparison.tsv \\
-        --output-json ${meta.id}.busco_comparison.json
+        --output-json ${meta.id}.busco_comparison.json \\
+        --output-mqc-json ${meta.id}.busco_comparison_mqc.json
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -39,6 +41,7 @@ process COMPARE_BUSCO {
     """
     touch ${meta.id}.busco_comparison.tsv
     echo '{"sample_id":"${meta.id}","rows":[],"duplication_drop":{}}' > ${meta.id}.busco_comparison.json
+    echo '{"id":"busco_comparison","plot_type":"table","data":{}}' > ${meta.id}.busco_comparison_mqc.json
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         stub: "COMPARE_BUSCO"

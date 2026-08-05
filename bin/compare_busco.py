@@ -48,6 +48,7 @@ def main():
     parser.add_argument("--dup-drop-threshold", type=float, default=0.5)
     parser.add_argument("--output-tsv", required=True)
     parser.add_argument("--output-json", required=True)
+    parser.add_argument("--output-mqc-json", required=True, help="MultiQC custom-content JSON path")
     args = parser.parse_args()
 
     rows = []
@@ -103,6 +104,37 @@ def main():
     }
     with open(args.output_json, "w") as handle:
         json.dump(output, handle, indent=2)
+
+    mqc = {
+        "id": "busco_comparison",
+        "section_name": "BUSCO comparison across stages",
+        "description": (
+            "BUSCO completeness/duplication for every pipeline stage x lineage, "
+            "from BUSCO's own short_summary JSON output."
+        ),
+        "plot_type": "table",
+        "pconfig": {
+            "id": "busco_comparison_table",
+            "title": "BUSCO comparison across stages",
+            "namespace": "BUSCO Comparison",
+        },
+        "data": {
+            f"{row['sample_id']}_{row['stage']}_{row['lineage']}": {
+                "Sample": row["sample_id"],
+                "Stage": row["stage"],
+                "Lineage": row["lineage"],
+                "Complete %": row["complete_pct"],
+                "Single %": row["single_copy_pct"],
+                "Duplicated %": row["duplicated_pct"],
+                "Fragmented %": row["fragmented_pct"],
+                "Missing %": row["missing_pct"],
+                "n_markers": row["n_markers"],
+            }
+            for row in rows
+        },
+    }
+    with open(args.output_mqc_json, "w") as handle:
+        json.dump(mqc, handle, indent=2)
 
 
 if __name__ == "__main__":

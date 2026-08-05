@@ -27,6 +27,7 @@ The pipeline processes each sample through the following stages:
   - `<sample_id>.filtered.fasta`: assembly with `--exclude_taxa` contigs removed.
   - `retained_ids.txt` / `excluded_ids.txt`: contig IDs kept/removed.
   - `<sample_id>.span_check.json`: the programmatic check that span(filtered) + span(excluded, from the BlobDir) == span(original) within `--span_tolerance`. The process fails if this does not hold.
+  - `<sample_id>.span_check_mqc.json`: the same span check, reformatted as a MultiQC custom-content table.
   - `<sample_id>.filter_summary.json`: raw `blobtools filter --summary STDOUT` output.
 
 </details>
@@ -79,6 +80,7 @@ Only produced when `--run_purge_haplotigs` is `true` (default).
 <summary>Output files</summary>
 
 - `assembly/<sample_id>.<stage>.stats.json`: contig count, total span, N50, longest contig, for `stage` in `raw`, `filtered`, `purge_dups`, `purge_haplotigs`.
+- `assembly/<sample_id>.<stage>.assembly_stats_mqc.json`: the same numbers, reformatted as a MultiQC custom-content table (one row per sample x stage).
 
 </details>
 
@@ -90,6 +92,7 @@ Only produced when `--run_purge_haplotigs` is `true` (default).
 - `busco/<sample_id>.<stage>.<lineage>_busco/`: full BUSCO output directory per stage x lineage.
 - `busco/<sample_id>.<stage>.<lineage>.short_summary.json`: BUSCO's own summary JSON, the source of every number used downstream.
 - `compare/<sample_id>.busco_comparison.tsv`, `<sample_id>.busco_comparison.json`: one comparative table per sample, across all stages and lineages, plus the per-lineage duplication-drop figures used in the report's verdict.
+- `compare/<sample_id>.busco_comparison_mqc.json`: the same per-stage x lineage rows, reformatted as a MultiQC custom-content table.
 
 </details>
 
@@ -110,7 +113,7 @@ Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineag
 <summary>Output files</summary>
 
 - `multiqc/`
-  - `multiqc_report.html`: aggregate report across all samples in the run (BUSCO results, software versions).
+  - `multiqc_report.html`: aggregate report across all samples in the run (BUSCO results, samtools coverage stats, the BTK_FILTER span check, per-stage assembly stats, the cross-stage BUSCO comparison, and software versions).
   - `multiqc_data/`, `multiqc_plots/`: supporting data and static plot images.
 
 </details>

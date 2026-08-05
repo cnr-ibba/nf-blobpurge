@@ -12,6 +12,7 @@ process ASSEMBLY_STATS {
 
     output:
     tuple val(meta), val(stage), path("${meta.id}.${stage}.stats.json"), emit: stats
+    tuple val(meta), val(stage), path("${meta.id}.${stage}.assembly_stats_mqc.json"), emit: mqc_json
     path "versions.yml", emit: versions
 
     when:
@@ -22,7 +23,8 @@ process ASSEMBLY_STATS {
     assembly_stats.py ${fasta} \\
         --sample-id ${meta.id} \\
         --stage ${stage} \\
-        --output-json ${meta.id}.${stage}.stats.json
+        --output-json ${meta.id}.${stage}.stats.json \\
+        --output-mqc-json ${meta.id}.${stage}.assembly_stats_mqc.json
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -33,6 +35,7 @@ process ASSEMBLY_STATS {
     stub:
     """
     echo '{"sample_id":"${meta.id}","stage":"${stage}","n_contigs":1,"total_span":4,"n50":4,"longest_contig":4}' > ${meta.id}.${stage}.stats.json
+    echo '{"id":"assembly_stats","plot_type":"table","data":{"${meta.id}_${stage}":{"Sample":"${meta.id}","Stage":"${stage}"}}}' > ${meta.id}.${stage}.assembly_stats_mqc.json
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         stub: "ASSEMBLY_STATS"

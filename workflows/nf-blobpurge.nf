@@ -50,6 +50,7 @@ workflow BLOBPURGE {
     )
     ch_versions = ch_versions.mix(BTK_FILTER.out.versions)
     ch_stage_fastas = ch_stage_fastas.mix(BTK_FILTER.out.fasta.map { meta, fasta -> [ meta, 'filtered', fasta ] })
+    ch_multiqc_files = ch_multiqc_files.mix(BTK_FILTER.out.span_check_mqc.map { _meta, f -> f })
 
     //
     // STEP 2: read coverage for purge_dups (CRAM subset, or fresh bwa-mem2 mapping)
@@ -96,6 +97,7 @@ workflow BLOBPURGE {
     //
     ASSEMBLY_STATS(ch_stage_fastas)
     ch_versions = ch_versions.mix(ASSEMBLY_STATS.out.versions)
+    ch_multiqc_files = ch_multiqc_files.mix(ASSEMBLY_STATS.out.mqc_json.map { _meta, _stage, f -> f })
 
     ASSEMBLY_STATS.out.stats
         .map { meta, _stage, stats -> [ meta, stats ] }
@@ -107,6 +109,7 @@ workflow BLOBPURGE {
     ch_multiqc_files = ch_multiqc_files.mix(
         BUSCO_COMPARE.out.short_summaries_txt.map { _meta, _stage, _lineage, summary -> summary }
     )
+    ch_multiqc_files = ch_multiqc_files.mix(BUSCO_COMPARE.out.comparison_mqc.map { _meta, f -> f })
 
     //
     // STEP 6: per-sample report

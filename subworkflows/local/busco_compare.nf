@@ -40,5 +40,6 @@ workflow BUSCO_COMPARE {
     short_summaries_txt = BUSCO.out.short_summary_txt
     comparison_tsv      = COMPARE_BUSCO.out.tsv
     comparison_json     = COMPARE_BUSCO.out.json
+    comparison_mqc      = COMPARE_BUSCO.out.mqc
     versions            = ch_versions
 }
