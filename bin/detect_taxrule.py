@@ -7,10 +7,31 @@ was built with). This script inspects meta.json and prints a single taxrule
 name to stdout, or exits non-zero with an explicit, actionable error.
 """
 import argparse
+import gzip
 import json
 import sys
+from pathlib import Path
 
 KNOWN_TAXRULE_PREFIXES = ("bestsumorder", "bestsum")
+
+
+def resolve_blobdir_file(blobdir, filename):
+    """Resolve <blobdir>/<filename>, preferring the gzip sibling
+    <filename>.gz when both exist (newer BlobToolKit versions
+    gzip-compress per-field BlobDir JSON files)."""
+    base = Path(blobdir) / filename
+    gz = Path(f"{base}.gz")
+    if gz.exists():
+        return gz
+    if base.exists():
+        return base
+    raise FileNotFoundError(f"neither {base} nor {gz} exists")
+
+
+def load_json(path):
+    opener = gzip.open if str(path).endswith(".gz") else open
+    with opener(path, "rt") as handle:
+        return json.load(handle)
 
 
 def candidate_taxrules_from_fields(meta):
@@ -26,11 +47,14 @@ def candidate_taxrules_from_fields(meta):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("meta_json", help="Path to <blobdir>/meta.json")
+    parser.add_argument("blobdir", help="Path to the BlobDir directory (containing meta.json or meta.json.gz)")
     args = parser.parse_args()
 
-    with open(args.meta_json) as handle:
-        meta = json.load(handle)
+    try:
+        meta_path = resolve_blobdir_file(args.blobdir, "meta.json")
+    except FileNotFoundError:
+        sys.exit(f"ERROR: no meta.json or meta.json.gz found in {args.blobdir}")
+    meta = load_json(meta_path)
 
     # 1) Explicit settings in meta.json (most reliable, when present).
     settings = meta.get("settings", {})

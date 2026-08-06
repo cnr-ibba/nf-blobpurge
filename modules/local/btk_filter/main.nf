@@ -31,7 +31,7 @@ process BTK_FILTER {
     """
     TAXRULE="${taxrule_param}"
     if [ -z "\${TAXRULE}" ]; then
-        TAXRULE=\$(detect_taxrule.py ${blobdir}/meta.json)
+        TAXRULE=\$(detect_taxrule.py ${blobdir})
         echo "Auto-detected --taxrule from BlobDir meta.json: \${TAXRULE}"
     fi
 
@@ -47,7 +47,7 @@ process BTK_FILTER {
         echo "ERROR: blobtools filter failed for sample '${meta.id}'." >&2
         echo "This is usually caused by --taxon_field ('${taxon_field}') or --taxrule ('\${TAXRULE}')" >&2
         echo "not matching a field actually present in the BlobDir. Inspect" >&2
-        echo "${blobdir}/meta.json ('fields' and 'settings.taxrule(s)') and see docs/usage.md." >&2
+        echo "${blobdir}/meta.json (or meta.json.gz) ('fields' and 'settings.taxrule(s)') and see docs/usage.md." >&2
         exit 1
     fi
 

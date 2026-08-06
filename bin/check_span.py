@@ -19,12 +19,32 @@ import argparse
 import gzip
 import json
 import sys
+from pathlib import Path
 
 
 def open_maybe_gzip(path):
     if str(path).endswith(".gz"):
         return gzip.open(path, "rt")
     return open(path)
+
+
+def resolve_blobdir_file(blobdir, filename):
+    """Resolve <blobdir>/<filename>, preferring the gzip sibling
+    <filename>.gz when both exist (newer BlobToolKit versions
+    gzip-compress per-field BlobDir JSON files)."""
+    base = Path(blobdir) / filename
+    gz = Path(f"{base}.gz")
+    if gz.exists():
+        return gz
+    if base.exists():
+        return base
+    raise FileNotFoundError(f"neither {base} nor {gz} exists")
+
+
+def load_json(path):
+    opener = gzip.open if str(path).endswith(".gz") else open
+    with opener(path, "rt") as handle:
+        return json.load(handle)
 
 
 def fasta_spans(path):
@@ -49,10 +69,8 @@ def fasta_spans(path):
     return spans
 
 
-def load_field(path):
-    """Load a BlobDir field JSON file and return its value list."""
-    with open(path) as handle:
-        data = json.load(handle)
+def field_values(data, path):
+    """Extract a BlobDir field's value list from its parsed JSON dict."""
     for key in ("values", "data"):
         if key in data:
             return data[key]
@@ -79,19 +97,19 @@ def main():
     original_span = sum(original_spans.values())
     filtered_span = sum(filtered_spans.values())
 
-    identifiers = load_field(f"{args.blobdir}/identifiers.json")
-    lengths = load_field(f"{args.blobdir}/length.json")
+    identifiers = field_values(load_json(resolve_blobdir_file(args.blobdir, "identifiers.json")), "identifiers.json")
+    lengths = field_values(load_json(resolve_blobdir_file(args.blobdir, "length.json")), "length.json")
+
     try:
-        categories = load_field(f"{args.blobdir}/{args.taxon_field}.json")
+        taxon_path = resolve_blobdir_file(args.blobdir, f"{args.taxon_field}.json")
     except FileNotFoundError:
         sys.exit(
-            f"ERROR: BlobDir field '{args.taxon_field}.json' not found in {args.blobdir}. "
+            f"ERROR: BlobDir field '{args.taxon_field}.json' (or '.json.gz') not found in {args.blobdir}. "
             "--taxon_field must name a categorical field that actually exists in this "
             "BlobDir (check <blobdir>/meta.json for the list of available 'fields')."
         )
-
-    with open(f"{args.blobdir}/{args.taxon_field}.json") as handle:
-        field_meta = json.load(handle)
+    field_meta = load_json(taxon_path)
+    categories = field_values(field_meta, taxon_path)
     keys = field_meta.get("keys")
 
     if len(identifiers) != len(lengths) or len(identifiers) != len(categories):

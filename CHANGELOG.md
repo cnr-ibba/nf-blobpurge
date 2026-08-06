@@ -9,6 +9,8 @@ Initial release of cnr-ibba/nf-blobpurge, created with the [nf-core](https://nf-
 
 ### `Added`
 
+- Support gzip-compressed per-field BlobDir JSON files (`*.json.gz`, as produced by newer BlobToolKit versions) in `bin/detect_taxrule.py` and `bin/check_span.py`.
+
 ### `Fixed`
 
 ### `Dependencies`

@@ -39,6 +39,22 @@ def random_seq(n):
     return "".join(random.choice(BASES) for _ in range(n))
 
 
+def write_blobdir_json(path, data, *, gzip_compress=False):
+    """Write a BlobDir field JSON file, optionally gzip-compressed
+    (<path>.gz) to mirror newer BlobToolKit output. Compression is
+    deliberately mixed across this fixture's files so -profile test
+    exercises both the "prefer .json.gz" and "fall back to plain .json"
+    branches of bin/detect_taxrule.py and bin/check_span.py's BlobDir-file
+    resolution in a single run.
+    """
+    text = json.dumps(data, indent=2)
+    if gzip_compress:
+        with gzip.open(f"{path}.gz", "wt") as handle:
+            handle.write(text)
+    else:
+        path.write_text(text)
+
+
 def mutate(seq, rate):
     bases = list(seq)
     for i in range(len(bases)):
@@ -148,7 +164,11 @@ def main():
     }
     values = [keys.index(label_by_contig[i]) for i in identifiers]
 
-    (blobdir / "meta.json").write_text(json.dumps({
+    # Compression is deliberately mixed here (see write_blobdir_json): a real
+    # sanger-tol/blobtoolkit BlobDir gzip-compresses its per-field JSON
+    # files, but not every BlobDir out there will be -- mixing both in this
+    # one fixture exercises both code paths without a second nf-test scenario.
+    write_blobdir_json(blobdir / "meta.json", {
         "id": "blobpurge_test",
         "name": "blobpurge synthetic test BlobDir",
         "record_type": "contig",
@@ -166,33 +186,33 @@ def main():
             # own taxonomy-hit summarisation step.
             {"id": "bestsumorder_phylum", "type": "category"},
         ],
-    }, indent=2))
+    }, gzip_compress=True)
 
-    (blobdir / "identifiers.json").write_text(json.dumps({
+    write_blobdir_json(blobdir / "identifiers.json", {
         "id": "identifiers", "name": "identifiers", "type": "identifier", "values": identifiers,
-    }, indent=2))
+    }, gzip_compress=False)
 
-    (blobdir / "length.json").write_text(json.dumps({
+    write_blobdir_json(blobdir / "length.json", {
         "id": "length", "name": "length", "type": "variable", "values": lengths,
-    }, indent=2))
+    }, gzip_compress=True)
 
-    (blobdir / "gc.json").write_text(json.dumps({
+    write_blobdir_json(blobdir / "gc.json", {
         "id": "gc", "name": "GC", "type": "variable", "values": gc_portions,
-    }, indent=2))
+    }, gzip_compress=False)
 
-    (blobdir / "ncount.json").write_text(json.dumps({
+    write_blobdir_json(blobdir / "ncount.json", {
         "id": "ncount", "name": "N count", "type": "variable", "values": n_counts,
-    }, indent=2))
+    }, gzip_compress=False)
 
-    (blobdir / "buscoregions_phylum.json").write_text(json.dumps({
+    write_blobdir_json(blobdir / "buscoregions_phylum.json", {
         "id": "buscoregions_phylum", "name": "buscoregions_phylum", "type": "category",
         "keys": keys, "values": values,
-    }, indent=2))
+    }, gzip_compress=True)
 
-    (blobdir / "bestsumorder_phylum.json").write_text(json.dumps({
+    write_blobdir_json(blobdir / "bestsumorder_phylum.json", {
         "id": "bestsumorder_phylum", "name": "bestsumorder_phylum", "type": "category",
         "keys": keys, "values": values,
-    }, indent=2))
+    }, gzip_compress=False)
 
     # No samplesheet.csv is written here: nf-schema resolves relative paths
     # in a samplesheet against the launch directory, not the CSV's own
