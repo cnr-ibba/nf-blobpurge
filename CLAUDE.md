@@ -38,11 +38,11 @@ nextflow run . -profile docker \
 
 ### Test
 ```bash
-nf-test test --tag test --profile +docker --verbose
+nf-test test --tag pipeline --profile +docker --verbose
 ```
 Update snapshots after intentional output changes:
 ```bash
-nf-test test --tag test --profile +docker --verbose --update-snapshots
+nf-test test --tag pipeline --profile +docker --verbose --update-snapshots
 ```
 There is a single top-level pipeline test, `tests/default.nf.test`, which runs `-profile test` end-to-end and snapshots stable output paths/contents plus the collated versions file. Module/subworkflow-level `.nf.test` files are not currently used in this repo — only nf-core/modules vendored tests exist (ignored by `nf-test.config`).
 
