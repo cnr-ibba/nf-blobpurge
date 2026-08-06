@@ -10,7 +10,7 @@
 // logged as a caveat rather than presented as an equivalent use case.
 //
 
-include { SAMTOOLS_DEPTH                   } from '../../modules/local/samtools_depth/main'
+include { SAMTOOLS_DEPTH                   } from '../../modules/nf-core/samtools/depth/main'
 include { PURGEHAPLOTIGS_ESTIMATE_CUTOFFS  } from '../../modules/local/purgehaplotigs_estimate_cutoffs/main'
 include { PURGEHAPLOTIGS_HIST              } from '../../modules/local/purgehaplotigs_hist/main'
 include { PURGEHAPLOTIGS_COV                } from '../../modules/local/purgehaplotigs_cov/main'
@@ -32,10 +32,9 @@ workflow PURGE_HAPLOTIGS {
         }
     )
 
-    SAMTOOLS_DEPTH(ch_bam)
-    ch_versions = ch_versions.mix(SAMTOOLS_DEPTH.out.versions)
+    SAMTOOLS_DEPTH(ch_bam.map { meta, bam, bai -> [ meta, bam, bai, [] ] })
 
-    PURGEHAPLOTIGS_ESTIMATE_CUTOFFS(SAMTOOLS_DEPTH.out.depth)
+    PURGEHAPLOTIGS_ESTIMATE_CUTOFFS(SAMTOOLS_DEPTH.out.tsv)
     ch_versions = ch_versions.mix(PURGEHAPLOTIGS_ESTIMATE_CUTOFFS.out.versions)
 
     ch_bam

@@ -10,13 +10,13 @@
 // PURGEDUPS_NGSCSTAT).
 //
 
-include { CRAM_TO_BAM         } from '../../modules/local/cram_to_bam/main'
-include { BWAMEM2_INDEX       } from '../../modules/local/bwamem2_index/main'
-include { BWAMEM2_MEM         } from '../../modules/local/bwamem2_mem/main'
-include { SAMTOOLS_SORT_INDEX } from '../../modules/local/samtools_sort_index/main'
-include { SAMTOOLS_SORT_NAME  } from '../../modules/local/samtools_sort_name/main'
-include { SAMTOOLS_STATS      } from '../../modules/local/samtools_stats/main'
-include { PURGEDUPS_NGSCSTAT  } from '../../modules/local/purgedups_ngscstat/main'
+include { CRAM_TO_BAM                         } from '../../modules/local/cram_to_bam/main'
+include { BWAMEM2_INDEX                       } from '../../modules/nf-core/bwamem2/index/main'
+include { BWAMEM2_MEM                         } from '../../modules/nf-core/bwamem2/mem/main'
+include { SAMTOOLS_SORT as SAMTOOLS_SORT_NAME } from '../../modules/nf-core/samtools/sort/main'
+include { BAM_SORT_STATS_SAMTOOLS             } from '../../subworkflows/nf-core/bam_sort_stats_samtools/main'
+include { BAM_STATS_SAMTOOLS                  } from '../../subworkflows/nf-core/bam_stats_samtools/main'
+include { PURGEDUPS_NGSCSTAT                  } from '../../modules/local/purgedups_ngscstat/main'
 
 workflow READ_COVERAGE {
 
@@ -27,6 +27,12 @@ workflow READ_COVERAGE {
     main:
     ch_versions = Channel.empty()
     ch_caveats  = Channel.empty()
+
+    // No fasta reference needed by any of the nf-core samtools/bwamem2 calls
+    // below (all consume/produce BAM, never CRAM), so a constant empty value
+    // channel is broadcast to every one of them.
+    ch_no_fasta     = Channel.value([ [:], [] ])
+    ch_no_fasta_fai = Channel.value([ [:], [], [] ])
 
     ch_reads
         .branch { meta, original_assembly, filtered_assembly, retained_ids, reads_cram, reads_r1, reads_r2 ->
@@ -43,6 +49,8 @@ workflow READ_COVERAGE {
     CRAM_TO_BAM(ch_branched.cram)
     ch_versions = ch_versions.mix(CRAM_TO_BAM.out.versions)
 
+    BAM_STATS_SAMTOOLS(CRAM_TO_BAM.out.bam, ch_no_fasta_fai)
+
     //
     // FASTQ path: fresh bwa-mem2 alignment against the filtered assembly.
     //
@@ -51,28 +59,29 @@ workflow READ_COVERAGE {
         .set { ch_for_index }
 
     BWAMEM2_INDEX(ch_for_index)
-    ch_versions = ch_versions.mix(BWAMEM2_INDEX.out.versions)
 
     ch_branched.fastq
         .join(BWAMEM2_INDEX.out.index)
-        .map { meta, filtered_assembly, reads_r1, reads_r2, index -> [ meta, index, reads_r1, reads_r2 ] }
+        .multiMap { meta, filtered_assembly, reads_r1, reads_r2, index ->
+            reads: [ meta, [ reads_r1, reads_r2 ] ]
+            index: [ meta, index ]
+        }
         .set { ch_for_mem }
 
-    BWAMEM2_MEM(ch_for_mem)
-    ch_versions = ch_versions.mix(BWAMEM2_MEM.out.versions)
+    BWAMEM2_MEM(ch_for_mem.reads, ch_for_mem.index, ch_no_fasta, false)
 
-    SAMTOOLS_SORT_INDEX(BWAMEM2_MEM.out.sam)
-    ch_versions = ch_versions.mix(SAMTOOLS_SORT_INDEX.out.versions)
+    BAM_SORT_STATS_SAMTOOLS(BWAMEM2_MEM.out.bam, ch_no_fasta_fai)
 
     //
     // Common: ngscstat on whichever BAM was produced. ngscstat needs a
     // name-sorted BAM (see SAMTOOLS_SORT_NAME); the coordinate-sorted/indexed
     // BAM is kept as-is for downstream consumers (e.g. purge_haplotigs).
     //
-    ch_bam = CRAM_TO_BAM.out.bam.mix(SAMTOOLS_SORT_INDEX.out.bam)
+    ch_bam = CRAM_TO_BAM.out.bam.mix(
+        BAM_SORT_STATS_SAMTOOLS.out.bam.join(BAM_SORT_STATS_SAMTOOLS.out.index)
+    )
 
-    SAMTOOLS_SORT_NAME(ch_bam)
-    ch_versions = ch_versions.mix(SAMTOOLS_SORT_NAME.out.versions)
+    SAMTOOLS_SORT_NAME(ch_bam.map { meta, bam, _bai -> [ meta, bam ] }, ch_no_fasta_fai, '')
 
     PURGEDUPS_NGSCSTAT(SAMTOOLS_SORT_NAME.out.bam)
     ch_versions = ch_versions.mix(PURGEDUPS_NGSCSTAT.out.versions)
@@ -82,12 +91,12 @@ workflow READ_COVERAGE {
     // QC-only: mapping-rate/insert-size/per-contig stats for MultiQC, on
     // whichever BAM was produced (CRAM subset or fresh bwa-mem2 mapping).
     //
-    SAMTOOLS_STATS(ch_bam)
-    ch_versions = ch_versions.mix(SAMTOOLS_STATS.out.versions)
-
-    ch_multiqc_files = SAMTOOLS_STATS.out.stats.map { _meta, f -> f }
-        .mix(SAMTOOLS_STATS.out.flagstat.map { _meta, f -> f })
-        .mix(SAMTOOLS_STATS.out.idxstats.map { _meta, f -> f })
+    ch_multiqc_files = BAM_STATS_SAMTOOLS.out.stats.map { _meta, f -> f }
+        .mix(BAM_STATS_SAMTOOLS.out.flagstat.map { _meta, f -> f })
+        .mix(BAM_STATS_SAMTOOLS.out.idxstats.map { _meta, f -> f })
+        .mix(BAM_SORT_STATS_SAMTOOLS.out.stats.map { _meta, f -> f })
+        .mix(BAM_SORT_STATS_SAMTOOLS.out.flagstat.map { _meta, f -> f })
+        .mix(BAM_SORT_STATS_SAMTOOLS.out.idxstats.map { _meta, f -> f })
 
     emit:
     stat          = PURGEDUPS_NGSCSTAT.out.stat

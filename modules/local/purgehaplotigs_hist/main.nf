@@ -25,8 +25,8 @@ process PURGEHAPLOTIGS_HIST {
 
     script:
     """
-    ln -s ${bam} ${meta.id}.bam
-    ln -s ${bai} ${meta.id}.bam.bai
+    [ -e ${meta.id}.bam ] || ln -s ${bam} ${meta.id}.bam
+    [ -e ${meta.id}.bam.bai ] || ln -s ${bai} ${meta.id}.bam.bai
     samtools faidx ${fasta}
 
     purge_haplotigs hist -b ${meta.id}.bam -g ${fasta} -t ${task.cpus} -d 200

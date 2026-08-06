@@ -15,10 +15,11 @@
                     "busco": "5.8.3"
                 },
                 "BWAMEM2_INDEX": {
-                    "bwa-mem2": "2.2.1"
+                    "bwamem2": "2.2.1"
                 },
                 "BWAMEM2_MEM": {
-                    "bwa-mem2": "2.2.1"
+                    "bwamem2": "2.2.1",
+                    "samtools": "1.22.1"
                 },
                 "COMPARE_BUSCO": {
                     "python": "3.12.2"
@@ -59,7 +60,16 @@
                 "SAMTOOLS_DEPTH": {
                     "samtools": 1.24
                 },
-                "SAMTOOLS_SORT_INDEX": {
+                "SAMTOOLS_FLAGSTAT": {
+                    "samtools": 1.24
+                },
+                "SAMTOOLS_IDXSTATS": {
+                    "samtools": 1.24
+                },
+                "SAMTOOLS_INDEX": {
+                    "samtools": 1.24
+                },
+                "SAMTOOLS_SORT": {
                     "samtools": 1.24
                 },
                 "SAMTOOLS_SORT_NAME": {
@@ -745,13 +755,13 @@
                 "busco/short_summary.blobpurge_test.purge_haplotigs.bacteria_odb10.txt",
                 "busco/short_summary.blobpurge_test.raw.bacteria_odb10.txt",
                 "bwamem2",
-                "bwamem2/blobpurge_test.sam",
-                "bwamem2/bwamem2_index",
-                "bwamem2/bwamem2_index/blobpurge_test.filtered.0123",
-                "bwamem2/bwamem2_index/blobpurge_test.filtered.amb",
-                "bwamem2/bwamem2_index/blobpurge_test.filtered.ann",
-                "bwamem2/bwamem2_index/blobpurge_test.filtered.bwt.2bit.64",
-                "bwamem2/bwamem2_index/blobpurge_test.filtered.pac",
+                "bwamem2/blobpurge_test.bam",
+                "bwamem2/bwamem2",
+                "bwamem2/bwamem2/blobpurge_test.filtered.fasta.0123",
+                "bwamem2/bwamem2/blobpurge_test.filtered.fasta.amb",
+                "bwamem2/bwamem2/blobpurge_test.filtered.fasta.ann",
+                "bwamem2/bwamem2/blobpurge_test.filtered.fasta.bwt.2bit.64",
+                "bwamem2/bwamem2/blobpurge_test.filtered.fasta.pac",
                 "compare",
                 "compare/blobpurge_test.busco_comparison.json",
                 "compare/blobpurge_test.busco_comparison.tsv",
@@ -857,13 +867,12 @@
                 "purgehaplotigs/blobpurge_test.cutoffs.json",
                 "purgehaplotigs/blobpurge_test.depth_hist.tsv",
                 "samtools",
-                "samtools/blobpurge_test.coverage.sorted.bam",
-                "samtools/blobpurge_test.coverage.sorted.bam.bai",
-                "samtools/blobpurge_test.depth.tsv",
+                "samtools/blobpurge_test.bam",
+                "samtools/blobpurge_test.bam.bai",
                 "samtools/blobpurge_test.flagstat",
                 "samtools/blobpurge_test.idxstats",
-                "samtools/blobpurge_test.namesorted.bam",
-                "samtools/blobpurge_test.stats"
+                "samtools/blobpurge_test.stats",
+                "samtools/blobpurge_test.tsv"
             ],
             [
                 "blobpurge_test_blobpurge.html:md5,024ef4e4653a4452574930ba49afa9e6",
@@ -881,12 +890,12 @@
                 "blobpurge_test.span_check_mqc.json:md5,4b9b305c0120b98b5dccd540500cc4e2",
                 "excluded_ids.txt:md5,a285ee5da3fd3abcbb8cb6c8baab4c4c",
                 "retained_ids.txt:md5,b8d841d853bb1bc7ebd1b3b469c531e5",
-                "blobpurge_test.sam:md5,1ac7b6446dd23ca4bab998d3e6ad043a",
-                "blobpurge_test.filtered.0123:md5,b2eeb480d053ba6fc0a3c6840af85caf",
-                "blobpurge_test.filtered.amb:md5,46662e4cc381eda39d4dc62f3e9d9450",
-                "blobpurge_test.filtered.ann:md5,702628978b175d15332d1df8960e6408",
-                "blobpurge_test.filtered.bwt.2bit.64:md5,eb08cd61955ec6228246c768e9465f84",
-                "blobpurge_test.filtered.pac:md5,a66f380bb758176d7dd9efe50ac7f9aa",
+                "blobpurge_test.bam:md5,4774248df2ba0858dc82776d53f1b99f",
+                "blobpurge_test.filtered.fasta.0123:md5,b2eeb480d053ba6fc0a3c6840af85caf",
+                "blobpurge_test.filtered.fasta.amb:md5,46662e4cc381eda39d4dc62f3e9d9450",
+                "blobpurge_test.filtered.fasta.ann:md5,702628978b175d15332d1df8960e6408",
+                "blobpurge_test.filtered.fasta.bwt.2bit.64:md5,eb08cd61955ec6228246c768e9465f84",
+                "blobpurge_test.filtered.fasta.pac:md5,a66f380bb758176d7dd9efe50ac7f9aa",
                 "blobpurge_test.busco_comparison.json:md5,c69a17e6218f67e2b7948e3c93c7aaca",
                 "blobpurge_test.busco_comparison.tsv:md5,49bd84c3d5e7647af9c2500ffb45af42",
                 "blobpurge_test.busco_comparison_mqc.json:md5,8c3b52b7540be503fa81ee9ce759c5d4",
@@ -924,16 +933,15 @@
                 "blobpurge_test.curated.haplotigs.fasta:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "blobpurge_test.cutoffs.json:md5,5a528292b2df586c41b89da26f6159f0",
                 "blobpurge_test.depth_hist.tsv:md5,0e0a46f6b0daaacb2348f7c2afde3049",
-                "blobpurge_test.coverage.sorted.bam:md5,ac8a596c42d8c5161c5676307e2d9e27",
-                "blobpurge_test.coverage.sorted.bam.bai:md5,695ff12f67ea59d82799836d4dd564b3",
-                "blobpurge_test.depth.tsv:md5,09bf3ee144fa859f025fa6d4dc65853a",
+                "blobpurge_test.bam:md5,8979b866015b8cb759c800ba969499e8",
+                "blobpurge_test.bam.bai:md5,e4bd05e06b772926aad34c0ee1d694c4",
                 "blobpurge_test.flagstat:md5,554a1f56806ff8a554334dab2d5e1890",
                 "blobpurge_test.idxstats:md5,6e5e69346e54af8495bd36426c09e085",
-                "blobpurge_test.namesorted.bam:md5,8551d683bd44f70c959782c18726754e",
-                "blobpurge_test.stats:md5,6464ed50fa5990c949cb8ef171e9544e"
+                "blobpurge_test.stats:md5,316753949ef223e27a54fc48c68cdde5",
+                "blobpurge_test.tsv:md5,09bf3ee144fa859f025fa6d4dc65853a"
             ]
         ],
-        "timestamp": "2026-08-05T16:59:47.79695076",
+        "timestamp": "2026-08-06T15:23:50.525252456",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"
