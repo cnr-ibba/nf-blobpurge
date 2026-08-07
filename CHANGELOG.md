@@ -13,6 +13,8 @@ Initial release of cnr-ibba/nf-blobpurge, created with the [nf-core](https://nf-
 
 ### `Fixed`
 
+- `purge_dups` and `purge_haplotigs` no longer abort the whole run when a sample's coverage isn't usefully bimodal (needed to auto-derive cutoffs): that sample's affected stage is now skipped individually, with a caveat explaining why in its report, instead of crashing the entire multi-sample pipeline.
+
 ### `Dependencies`
 
 ### `Deprecated`

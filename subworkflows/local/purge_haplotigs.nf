@@ -3,7 +3,12 @@
 //
 // Cutoffs for `purge_haplotigs cov` are normally chosen by eye from the
 // coverage histogram; here they are estimated automatically from the
-// sample's own depth distribution (see PURGEHAPLOTIGS_ESTIMATE_CUTOFFS).
+// sample's own depth distribution (see PURGEHAPLOTIGS_ESTIMATE_CUTOFFS). If
+// that estimation finds no usable bimodal signal for a sample, it reports
+// itself as skipped rather than guessing, and this subworkflow simply omits
+// that sample's 'purge_haplotigs' stage (with an explanatory caveat) instead
+// of failing the whole run.
+//
 // The coverage BAM reused here comes from READ_COVERAGE, which for most
 // samples will be short-read (Illumina) coverage -- purge_haplotigs is
 // designed and documented primarily around long-read coverage, so this is
@@ -26,16 +31,29 @@ workflow PURGE_HAPLOTIGS {
     ch_versions = Channel.empty()
     ch_caveats  = Channel.empty()
 
-    ch_caveats = ch_caveats.mix(
-        ch_bam.map { meta, bam, bai ->
-            [ meta, "purge_haplotigs cross-check for '${meta.id}' was run on the same coverage used for purge_dups (typically short-read Illumina): purge_haplotigs is designed and documented primarily for long-read coverage, so this should be considered an indicative cross-check, not equivalent to its standard use case." ]
-        }
-    )
-
     SAMTOOLS_DEPTH(ch_bam.map { meta, bam, bai -> [ meta, bam, bai, [] ] })
 
     PURGEHAPLOTIGS_ESTIMATE_CUTOFFS(SAMTOOLS_DEPTH.out.tsv)
     ch_versions = ch_versions.mix(PURGEHAPLOTIGS_ESTIMATE_CUTOFFS.out.versions)
+
+    PURGEHAPLOTIGS_ESTIMATE_CUTOFFS.out.cutoffs
+        .map { meta, cutoffs_json -> [ meta, new groovy.json.JsonSlurper().parse(cutoffs_json) ] }
+        .branch { meta, parsed ->
+            skip:    parsed.skipped
+            proceed: !parsed.skipped
+        }
+        .set { ch_cutoffs_branch }
+
+    ch_caveats = ch_caveats.mix(
+        ch_cutoffs_branch.skip.map { meta, parsed ->
+            [ meta, "purge_haplotigs skipped for sample '${meta.id}': ${parsed.reason}" ]
+        }
+    )
+    ch_caveats = ch_caveats.mix(
+        ch_cutoffs_branch.proceed.map { meta, parsed ->
+            [ meta, "purge_haplotigs cross-check for '${meta.id}' was run on the same coverage used for purge_dups (typically short-read Illumina): purge_haplotigs is designed and documented primarily for long-read coverage, so this should be considered an indicative cross-check, not equivalent to its standard use case." ]
+        }
+    )
 
     ch_bam
         .join(ch_fasta)
@@ -45,10 +63,9 @@ workflow PURGE_HAPLOTIGS {
     ch_versions = ch_versions.mix(PURGEHAPLOTIGS_HIST.out.versions)
 
     PURGEHAPLOTIGS_HIST.out.gencov
-        .join(PURGEHAPLOTIGS_ESTIMATE_CUTOFFS.out.cutoffs)
-        .map { meta, gencov, cutoffs_json ->
-            def cutoffs = new groovy.json.JsonSlurper().parse(cutoffs_json)
-            [ meta, gencov, cutoffs.low, cutoffs.mid, cutoffs.high ]
+        .join(ch_cutoffs_branch.proceed)
+        .map { meta, gencov, parsed ->
+            [ meta, gencov, parsed.low, parsed.mid, parsed.high ]
         }
         .set { ch_for_cov }
 

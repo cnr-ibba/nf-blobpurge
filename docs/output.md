@@ -53,7 +53,7 @@ Runs `blobtools filter` against the existing BlobDir named in the samplesheet, u
   - `<sample_id>.split.fasta`, `<sample_id>.split.self.paf.gz`: self-alignment inputs/outputs.
   - `<sample_id>.cutoffs`, `<sample_id>.hist.png`, `<sample_id>.calcuts.log`: `calcuts` thresholds and the coverage histogram plot for visual sanity-checking (not just the numbers).
   - `<sample_id>.dups.bed`, `<sample_id>.purge_dups.log`: detected duplication regions.
-  - `<sample_id>.purged.fasta`: final purge_dups assembly.
+  - `<sample_id>.purged.fasta`: final purge_dups assembly. If `calcuts` could not determine usable cutoffs from this sample's coverage (not bimodal enough), this is the filtered assembly carried through unchanged, and the reason is recorded as a caveat in that sample's report.
   - `<sample_id>.purged_haplotigs.fasta`: contigs/regions removed as haplotigs.
 
 </details>
@@ -65,12 +65,12 @@ Runs `blobtools filter` against the existing BlobDir named in the samplesheet, u
 
 - `purgehaplotigs/`
   - `<sample_id>.bam.200.gencov`, `<sample_id>.bam.histogram.200.png`: `purge_haplotigs hist` output (`200` is the tool's `-d/-depth` cutoff, embedded in its output filenames).
-  - `<sample_id>.cutoffs.json`, `<sample_id>.depth_hist.tsv`: automatically-estimated low/mid/high cutoffs and the depth histogram they were derived from.
+  - `<sample_id>.cutoffs.json`, `<sample_id>.depth_hist.tsv`: automatically-estimated low/mid/high cutoffs and the depth histogram they were derived from. If no usable bimodal signal was found, `cutoffs.json` has `"skipped": true` and a `"reason"` instead of cutoffs, and the remaining files below are not produced for that sample -- the skip is instead recorded as a caveat in that sample's report.
   - `<sample_id>.coverage_stats.csv`: `purge_haplotigs cov` output.
   - `<sample_id>.curated.fasta`: final purge_haplotigs assembly.
   - `<sample_id>.curated.haplotigs.fasta`: contigs removed as haplotigs.
 
-Only produced when `--run_purge_haplotigs` is `true` (default).
+Only produced when `--run_purge_haplotigs` is `true` (default) and a usable bimodal coverage signal was found for that sample.
 
 </details>
 

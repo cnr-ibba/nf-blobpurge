@@ -70,6 +70,8 @@ Coverage for `purge_dups` is computed with `ngscstat`, purge_dups' Illumina/shor
 
 `--run_purge_haplotigs` (default `true`) runs `purge_haplotigs` in parallel on the *same* input, as an independent cross-check, not a second pass over `purge_dups`' output. `purge_haplotigs` is designed and documented primarily around long-read coverage; when run here on short-read coverage, that too is logged as a caveat. Its `cov` cutoffs (normally chosen by eye from a histogram) are instead estimated automatically from the sample's own bimodal depth distribution -- see `bin/estimate_purgehaplotigs_cutoffs.py`. If the two tools' purged assembly sizes disagree by more than `--purge_disagreement_threshold` (default 15%), the report flags this explicitly as something to resolve with long-read data, not something the pipeline arbitrates.
 
+Both cutoff-estimation steps need a genuinely bimodal coverage distribution and can legitimately fail to find one for a given sample (e.g. low heterozygosity, low depth, or an already near-haploid assembly). Rather than aborting the whole multi-sample run, this is handled per sample: `purge_dups` carries that sample's filtered assembly through the `purge_dups` stage unchanged, and `purge_haplotigs` simply omits its stage for that sample -- both cases are logged as a caveat (both to stderr and in that sample's report) explaining why, rather than failing the pipeline or silently trusting degenerate cutoffs.
+
 ### `--genomescope_summary`
 
 Optional path to a GenomeScope2 `summary.txt` for the sample, used in the report to sanity-check the final assembly size against an independent k-mer-based estimate. If not given, the report states explicitly that it was not available -- it is never silently omitted.

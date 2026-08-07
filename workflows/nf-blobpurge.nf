@@ -77,6 +77,7 @@ workflow BLOBPURGE {
         READ_COVERAGE.out.base_cov
     )
     ch_versions = ch_versions.mix(PURGE_DUPS.out.versions)
+    ch_caveats  = ch_caveats.mix(PURGE_DUPS.out.caveats)
     ch_stage_fastas = ch_stage_fastas.mix(PURGE_DUPS.out.purged_fasta.map { meta, fasta -> [ meta, 'purge_dups', fasta ] })
 
     //

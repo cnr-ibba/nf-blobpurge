@@ -39,7 +39,7 @@ process PURGEHAPLOTIGS_ESTIMATE_CUTOFFS {
 
     stub:
     """
-    echo '{"sample_id":"${meta.id}","primary_peak":40,"haploid_peak":20,"low":5,"mid":30,"high":80}' > ${meta.id}.cutoffs.json
+    echo '{"sample_id":"${meta.id}","skipped":false,"primary_peak":40,"haploid_peak":20,"low":5,"mid":30,"high":80}' > ${meta.id}.cutoffs.json
     touch ${meta.id}.depth_hist.tsv
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

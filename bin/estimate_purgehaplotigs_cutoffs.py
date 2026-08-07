@@ -17,11 +17,13 @@ This is a heuristic over the sample's own data (not a per-species constant):
     - high          = primary peak * --high-multiplier
 
 If no distinct haploid peak is found (e.g. an already well-purged or haploid
-assembly), the script exits non-zero with an explicit message rather than
-guessing -- the caller should then skip purge_haplotigs cov/purge for this
-sample, or supply cutoffs manually via --low/--mid/--high.
+assembly), the script does not guess: it writes a JSON result with
+"skipped": true and an explanation instead of low/mid/high cutoffs, and exits
+0 -- the caller (the Nextflow subworkflow) skips purge_haplotigs cov/purge for
+this sample rather than treating "no bimodal signal" as a pipeline failure.
 """
 import argparse
+import json
 import sys
 from collections import Counter
 
@@ -73,9 +75,18 @@ def main():
     parser.add_argument("--histogram-tsv", required=True)
     args = parser.parse_args()
 
+    def write_skipped(reason, **extra):
+        report = {"sample_id": args.sample_id, "skipped": True, "reason": reason, **extra}
+        with open(args.output_json, "w") as handle:
+            json.dump(report, handle, indent=2)
+        print(f"purge_haplotigs cutoffs skipped for '{args.sample_id}': {reason}", file=sys.stderr)
+        print(json.dumps(report, indent=2))
+
     counts = read_depth_histogram(args.depth_tsv, args.max_depth_cap)
     if not counts:
-        sys.exit(f"ERROR: no non-zero depth positions found in {args.depth_tsv}; cannot estimate purge_haplotigs cutoffs for '{args.sample_id}'.")
+        open(args.histogram_tsv, "w").close()
+        write_skipped(f"no non-zero depth positions found in {args.depth_tsv}; cannot estimate purge_haplotigs cutoffs.")
+        return
 
     max_depth = max(counts)
     smoothed = smooth(counts, max_depth)
@@ -91,36 +102,39 @@ def main():
     haploid_peak = find_peak(smoothed, haploid_lo, haploid_hi)
 
     if haploid_peak is None or haploid_peak >= primary_peak:
-        sys.exit(
-            f"ERROR: could not identify a distinct haploid coverage peak below "
-            f"the primary peak ({primary_peak}x) for sample '{args.sample_id}'. "
-            "The coverage distribution does not show the classic bimodal signature "
-            "of uncollapsed heterozygous haplotigs; purge_haplotigs cutoffs cannot "
-            "be estimated automatically. Inspect "
-            f"{args.histogram_tsv} and, if appropriate, supply --low/--mid/--high manually."
+        write_skipped(
+            f"could not identify a distinct haploid coverage peak below the primary peak "
+            f"({primary_peak}x). The coverage distribution does not show the classic bimodal "
+            "signature of uncollapsed heterozygous haplotigs; purge_haplotigs cutoffs cannot "
+            f"be estimated automatically. Inspect {args.histogram_tsv} and, if appropriate, "
+            "supply cutoffs manually.",
+            primary_peak=primary_peak,
         )
+        return
 
     low = find_trough(smoothed, max(1, int(haploid_peak * 0.3)), haploid_peak)
     mid = find_trough(smoothed, haploid_peak, primary_peak)
     high = min(max_depth, int(primary_peak * args.high_multiplier))
 
     if low is None or mid is None or not (low < haploid_peak < mid < primary_peak < high):
-        sys.exit(
-            f"ERROR: depth troughs around the candidate haploid peak ({haploid_peak}x) "
-            f"and primary peak ({primary_peak}x) were not well separated for sample "
-            f"'{args.sample_id}'; refusing to guess purge_haplotigs cutoffs. Inspect "
-            f"{args.histogram_tsv} and supply --low/--mid/--high manually."
+        write_skipped(
+            f"depth troughs around the candidate haploid peak ({haploid_peak}x) and primary "
+            f"peak ({primary_peak}x) were not well separated; refusing to guess purge_haplotigs "
+            f"cutoffs. Inspect {args.histogram_tsv} and supply cutoffs manually.",
+            primary_peak=primary_peak,
+            haploid_peak=haploid_peak,
         )
+        return
 
     report = {
         "sample_id": args.sample_id,
+        "skipped": False,
         "primary_peak": primary_peak,
         "haploid_peak": haploid_peak,
         "low": low,
         "mid": mid,
         "high": high,
     }
-    import json
     with open(args.output_json, "w") as handle:
         json.dump(report, handle, indent=2)
     print(json.dumps(report, indent=2))
