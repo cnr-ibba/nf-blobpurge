@@ -72,6 +72,25 @@ Coverage for `purge_dups` is computed with `ngscstat`, purge_dups' Illumina/shor
 
 Both cutoff-estimation steps need a genuinely bimodal coverage distribution and can legitimately fail to find one for a given sample (e.g. low heterozygosity, low depth, or an already near-haploid assembly). Rather than aborting the whole multi-sample run, this is handled per sample: `purge_dups` carries that sample's filtered assembly through the `purge_dups` stage unchanged, and `purge_haplotigs` simply omits its stage for that sample -- both cases are logged as a caveat (both to stderr and in that sample's report) explaining why, rather than failing the pipeline or silently trusting degenerate cutoffs.
 
+### `--run_organelle_isolation`
+
+Optional, default `false`. When enabled, contigs with extreme sequencing coverage (mitochondrial/plastid genomes typically have a much higher copy number per cell than the nuclear genome) are isolated **before** `PURGE_DUPS`/`PURGE_HAPLOTIGS` run, so their coverage does not distort the auto-estimated cutoffs (`calcuts`, `bin/estimate_purgehaplotigs_cutoffs.py`), which both assume a bimodal *nuclear* coverage distribution. Isolated contigs are not discarded: they are re-merged into the final assembly at every purge stage, and reported separately in an explicit "Organelle contig isolation" report section.
+
+```bash
+--run_organelle_isolation true
+--organelle_coverage_multiplier 5.0     # default
+--organelle_max_length 300000           # optional AND-gate, disabled by default
+--organelle_reference_fasta ./mito_plastid_refs.fasta   # optional
+--organelle_min_reference_coverage 0.8  # default
+--organelle_require_reference_match     # optional: require a reference match too, not just coverage
+```
+
+A contig is isolated when its mean depth is at least `--organelle_coverage_multiplier` times the length-weighted median depth across all contigs, and (if `--organelle_max_length` is set) its length is at or below that bound. If `--organelle_reference_fasta` is given, every contig is also aligned against it with minimap2 and the match fraction is recorded in the report; by default this is informational only, but `--organelle_require_reference_match` turns it into an additional hard requirement.
+
+This pipeline does not assemble organelle genomes itself. A matching paired-end read subset is exported alongside the isolated contig FASTA (`organelle/<sample_id>.organelle_R{1,2}.fastq.gz`) for use with dedicated tools such as [GetOrganelle](https://github.com/Kai-Guo/GetOrganelle), [MitoHiFi](https://github.com/marcelauliano/MitoHiFi), or [oatk](https://github.com/c-zhou/oatk).
+
+**Known limitation**: organelle isolation runs *after* `BTK_FILTER`. Organellar sequences are of prokaryotic ancestry (mitochondria from alphaproteobacteria, plastids from cyanobacteria) and can sometimes receive their best taxonomic hit against a bacterial reference in the BlobDir; if `--exclude_taxa` has already removed such a contig as contamination, this feature cannot recover it. Inspect the BlobDir's taxonomy assignments for unexpectedly bacterial-looking, high-coverage contigs before finalising `--exclude_taxa`.
+
 ### `--genomescope_summary`
 
 Optional path to a GenomeScope2 `summary.txt` for the sample, used in the report to sanity-check the final assembly size against an independent k-mer-based estimate. If not given, the report states explicitly that it was not available -- it is never silently omitted.
