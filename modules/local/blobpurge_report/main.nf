@@ -8,7 +8,7 @@ process BLOBPURGE_REPORT {
         : 'quay.io/biocontainers/python:3.12'}"
 
     input:
-    tuple val(meta), path(stats_files), path(span_check), path(busco_comparison_json), path(genomescope_summary), val(caveats)
+    tuple val(meta), path(stats_files), path(span_check), path(busco_comparison_json), path(genomescope_summary), path(organelle_report), val(caveats)
 
     output:
     tuple val(meta), path("${meta.id}_blobpurge.html"),         emit: html
@@ -20,6 +20,7 @@ process BLOBPURGE_REPORT {
 
     script:
     def genomescope_arg = genomescope_summary.name != 'NO_FILE' ? "--genomescope-summary ${genomescope_summary}" : ''
+    def organelle_arg = organelle_report.name != 'NO_FILE' ? "--organelle-report ${organelle_report}" : ''
     def run_ph_arg = params.run_purge_haplotigs ? '--run-purge-haplotigs' : ''
     def caveat_args = caveats.collect { "--caveats '${it.replace("'", "'\\''")}'" }.join(' ')
     """
@@ -29,6 +30,7 @@ process BLOBPURGE_REPORT {
         --span-check ${span_check} \\
         --busco-comparison ${busco_comparison_json} \\
         ${genomescope_arg} \\
+        ${organelle_arg} \\
         ${run_ph_arg} \\
         ${caveat_args} \\
         --dup-drop-threshold ${params.busco_dup_drop_threshold} \\

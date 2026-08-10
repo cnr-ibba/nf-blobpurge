@@ -135,6 +135,7 @@ def main():
     parser.add_argument("--span-check", required=True)
     parser.add_argument("--busco-comparison", required=True)
     parser.add_argument("--genomescope-summary", default=None)
+    parser.add_argument("--organelle-report", default=None, help="bin/detect_organelles.py --output-json, if --run_organelle_isolation was used")
     parser.add_argument("--caveats", action="append", default=[])
     parser.add_argument("--run-purge-haplotigs", action="store_true")
     parser.add_argument("--dup-drop-threshold", type=float, default=0.5)
@@ -146,6 +147,7 @@ def main():
     span_check = load_json(args.span_check)
     busco_comparison = load_json(args.busco_comparison)
     genomescope = parse_genomescope_summary(args.genomescope_summary)
+    organelle_report = load_json(args.organelle_report) if args.organelle_report else None
 
     span_pd = stats.get("purge_dups", {}).get("total_span")
     span_ph = stats.get("purge_haplotigs", {}).get("total_span")
@@ -242,6 +244,42 @@ def main():
         f'{"OK" if span_check["pass"] else "FAILED"}</p>'
     )
 
+    if organelle_report is None:
+        organelle_html = (
+            '<p class="warn">Organelle isolation not enabled (see --run_organelle_isolation): no separate '
+            "accounting for mitochondrial/plastid contigs is available.</p>"
+        )
+    else:
+        n_isolated = organelle_report.get("n_isolated", 0)
+        threshold_note = (
+            f'coverage &ge; {organelle_report.get("threshold", 0):.1f}x '
+            f'({organelle_report.get("coverage_multiplier")}x the '
+            f'{organelle_report.get("baseline_coverage", 0):.1f}x nuclear baseline)'
+        )
+        if n_isolated:
+            reference_used = organelle_report.get("reference_fasta_used", False)
+            ref_col = "<th>Reference match</th>" if reference_used else ""
+            contig_rows = "".join(
+                f"<tr><td>{html.escape(c['id'])}</td><td>{fmt_bp(c['length'])}</td>"
+                f"<td>{c['mean_depth']:.1f}x</td><td>{(c['coverage_ratio'] or 0):.1f}x</td>"
+                + (f"<td>{'Yes' if c.get('reference_matched') else 'No'}</td>" if reference_used else "")
+                + "</tr>"
+                for c in organelle_report.get("contigs", [])
+                if c.get("isolated")
+            )
+            organelle_html = (
+                f'<p class="ok">{n_isolated} organelle-like contig(s) isolated '
+                f'(total {fmt_bp(organelle_report.get("total_isolated_span"))}), {threshold_note}. '
+                "Excluded from purge_dups/purge_haplotigs coverage-cutoff estimation and re-merged into the "
+                "final assembly at each stage. A matching paired-end read subset was exported alongside the "
+                "isolated FASTA (see the pipeline output directory) for use with external organelle-assembly "
+                "tools such as GetOrganelle, MitoHiFi, or oatk.</p>"
+                f"<table><thead><tr><th>Contig</th><th>Length</th><th>Mean depth</th><th>Coverage ratio</th>{ref_col}</tr></thead>"
+                f"<tbody>{contig_rows}</tbody></table>"
+            )
+        else:
+            organelle_html = f'<p class="warn">Organelle isolation enabled, but no contig was isolated ({threshold_note}).</p>'
+
     verdict_class = {"YES": "ok", "PARTIAL": "warn", "NO": "fail"}[verdict["verdict"]]
 
     html_doc = f"""<!doctype html>
@@ -283,6 +321,9 @@ def main():
 <h3>Span-conservation check (BTK_FILTER)</h3>
 {span_check_html}
 
+<h2>Organelle contig isolation</h2>
+{organelle_html}
+
 <h2>Comparison with GenomeScope2</h2>
 {genomescope_html}
 
@@ -309,6 +350,7 @@ def main():
         "span_check": span_check,
         "disagreement": disagreement,
         "genomescope_provided": genomescope is not None,
+        "organelle": organelle_report,
     }
     with open(args.output_html.replace(".html", ".summary.json"), "w") as handle:
         json.dump(summary, handle, indent=2)
