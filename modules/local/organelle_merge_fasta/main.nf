@@ -11,8 +11,10 @@ process ORGANELLE_MERGE_FASTA {
     // so they don't distort coverage-cutoff estimation) back into each purge
     // stage's FASTA -- they are real assembly content, not contamination,
     // and stay part of the final assembly. Reuses the python:3.12 image
-    // already vendored for BLOBPURGE_REPORT purely as a container with
-    // coreutils; no python is actually invoked.
+    // already vendored for BLOBPURGE_REPORT purely as a container with `cat`
+    // available; no python is actually invoked (the biocontainers python:3.12
+    // image is BusyBox-based, not GNU coreutils -- versions.yml reports the
+    // BusyBox version accordingly, not a "coreutils" version).
     input:
     tuple val(meta), path(purged_fasta), path(organelle_fasta)
 
@@ -30,7 +32,7 @@ process ORGANELLE_MERGE_FASTA {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        coreutils: \$(cat --version | head -n1 | sed 's/^cat (GNU coreutils) //')
+        busybox: \$(busybox 2>&1 | head -n1 | sed 's/^BusyBox v//; s/ .*//')
     END_VERSIONS
     """
 

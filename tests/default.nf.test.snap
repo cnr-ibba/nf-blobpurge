@@ -24,6 +24,27 @@
                 "COMPARE_BUSCO": {
                     "python": "3.12.2"
                 },
+                "NUCLEAR_FILTER_BAM": {
+                    "samtools": 1.24
+                },
+                "ORGANELLE_DETECT": {
+                    "python": "3.12.2"
+                },
+                "ORGANELLE_EXTRACT_READS": {
+                    "samtools": 1.24
+                },
+                "ORGANELLE_FILTER_BAM": {
+                    "samtools": 1.24
+                },
+                "ORGANELLE_MERGE_FASTA_PURGEDUPS": {
+                    "busybox": "1.36.1"
+                },
+                "ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS": {
+                    "busybox": "1.36.1"
+                },
+                "ORGANELLE_REFERENCE_ALIGN": {
+                    "minimap2": "2.28-r1209"
+                },
                 "PURGEDUPS_CALCUTS": {
                     "purge_dups": "1.2.5"
                 },
@@ -57,6 +78,9 @@
                 "PURGEHAPLOTIGS_PURGE": {
                     "purge_haplotigs": "1.1.3"
                 },
+                "SAMTOOLS_COVERAGE": {
+                    "samtools": 1.24
+                },
                 "SAMTOOLS_DEPTH": {
                     "samtools": 1.24
                 },
@@ -73,6 +97,12 @@
                     "samtools": 1.24
                 },
                 "SAMTOOLS_SORT_NAME": {
+                    "samtools": 1.24
+                },
+                "SAMTOOLS_SORT_NAME_NUCLEAR": {
+                    "samtools": 1.24
+                },
+                "SAMTOOLS_SORT_NAME_ORGANELLE": {
                     "samtools": 1.24
                 },
                 "SAMTOOLS_STATS": {
@@ -844,6 +874,23 @@
                 "multiqc/multiqc_plots/svg/samtools_alignment_plot-cnt.svg",
                 "multiqc/multiqc_plots/svg/samtools_alignment_plot-pct.svg",
                 "multiqc/multiqc_report.html",
+                "nuclear",
+                "nuclear/blobpurge_test.subset.sorted.bam",
+                "nuclear/blobpurge_test.subset.sorted.bam.bai",
+                "organelle",
+                "organelle/blobpurge_test.nuclear.fasta",
+                "organelle/blobpurge_test.nuclear_ids.txt",
+                "organelle/blobpurge_test.organelle.fasta",
+                "organelle/blobpurge_test.organelle_R1.fastq.gz",
+                "organelle/blobpurge_test.organelle_R2.fastq.gz",
+                "organelle/blobpurge_test.organelle_ids.txt",
+                "organelle/blobpurge_test.organelle_ref.paf",
+                "organelle/blobpurge_test.organelle_report.json",
+                "organelle/blobpurge_test.organelle_report.mqc.json",
+                "organelle/blobpurge_test.purge_dups.merged.fasta",
+                "organelle/blobpurge_test.purge_haplotigs.merged.fasta",
+                "organelle/blobpurge_test.subset.sorted.bam",
+                "organelle/blobpurge_test.subset.sorted.bam.bai",
                 "pipeline_info",
                 "pipeline_info/nf-blobpurge_software_mqc_versions.yml",
                 "purgedups",
@@ -872,76 +919,93 @@
                 "samtools/blobpurge_test.flagstat",
                 "samtools/blobpurge_test.idxstats",
                 "samtools/blobpurge_test.stats",
-                "samtools/blobpurge_test.tsv"
+                "samtools/blobpurge_test.tsv",
+                "samtools/blobpurge_test.txt"
             ],
             [
-                "blobpurge_test_blobpurge.html:md5,ec66fc4cbd4bfd85394ff0bbe34b8da6",
-                "blobpurge_test.filtered.assembly_stats_mqc.json:md5,ef06770508b0d8b0a6e0a2f774e6097a",
-                "blobpurge_test.filtered.stats.json:md5,bd1549a3b8e92f46bc401296ec9ee36c",
-                "blobpurge_test.purge_dups.assembly_stats_mqc.json:md5,d6f07c7ad2ee30e0f615cdbbeb319599",
-                "blobpurge_test.purge_dups.stats.json:md5,7266879bf9fec4a04461732f4994095f",
-                "blobpurge_test.purge_haplotigs.assembly_stats_mqc.json:md5,c0efa87fe5fd0fb74de2d96a3c323f9d",
-                "blobpurge_test.purge_haplotigs.stats.json:md5,52696c6a83573374763811d874a34718",
-                "blobpurge_test.raw.assembly_stats_mqc.json:md5,af11f170fd1eddf0e12b76c6b423cbc1",
-                "blobpurge_test.raw.stats.json:md5,956b19090844ffd3ead45de560e66940",
-                "blobpurge_test.filter_summary.json:md5,205faea0af1fdf37c123c76ee001b865",
-                "blobpurge_test.filtered.fasta:md5,af61347f1e38f221086396ddf1c41ccb",
-                "blobpurge_test.span_check.json:md5,e4e4718492022b945c7529b3361f80ba",
-                "blobpurge_test.span_check_mqc.json:md5,4b9b305c0120b98b5dccd540500cc4e2",
+                "blobpurge_test_blobpurge.html:md5,d0a2a1470d8fcc090f7879a0152742af",
+                "blobpurge_test.filtered.assembly_stats_mqc.json:md5,7670289bcfe00b3eadc7d6f7d6e44158",
+                "blobpurge_test.filtered.stats.json:md5,ef7b5ecb70ce59483d950f7d2ea5c314",
+                "blobpurge_test.purge_dups.assembly_stats_mqc.json:md5,5d597a072a8f1231e3e8eac333de5884",
+                "blobpurge_test.purge_dups.stats.json:md5,e83b6d12d17f0a7e8766a66cea2508da",
+                "blobpurge_test.purge_haplotigs.assembly_stats_mqc.json:md5,e491ff74ecd5313a204badd4c335875e",
+                "blobpurge_test.purge_haplotigs.stats.json:md5,42bcd656f2e4243aa7ce18225a139643",
+                "blobpurge_test.raw.assembly_stats_mqc.json:md5,1bff811dd13882ea61e79bd39a620cc6",
+                "blobpurge_test.raw.stats.json:md5,97771513a04ec482ae16ead2106d52dd",
+                "blobpurge_test.filter_summary.json:md5,c9ee66c8e2de770358180d8f7dcbf665",
+                "blobpurge_test.filtered.fasta:md5,67d7001f8db6af8d643161021ba45a6d",
+                "blobpurge_test.span_check.json:md5,58f6786c35751ac00c98cd83a8785cda",
+                "blobpurge_test.span_check_mqc.json:md5,7e9920d29ea3c014895c52bcb7c04ecd",
                 "excluded_ids.txt:md5,a285ee5da3fd3abcbb8cb6c8baab4c4c",
-                "retained_ids.txt:md5,b8d841d853bb1bc7ebd1b3b469c531e5",
-                "blobpurge_test.bam:md5,4774248df2ba0858dc82776d53f1b99f",
-                "blobpurge_test.filtered.fasta.0123:md5,b2eeb480d053ba6fc0a3c6840af85caf",
-                "blobpurge_test.filtered.fasta.amb:md5,46662e4cc381eda39d4dc62f3e9d9450",
-                "blobpurge_test.filtered.fasta.ann:md5,702628978b175d15332d1df8960e6408",
-                "blobpurge_test.filtered.fasta.bwt.2bit.64:md5,eb08cd61955ec6228246c768e9465f84",
-                "blobpurge_test.filtered.fasta.pac:md5,a66f380bb758176d7dd9efe50ac7f9aa",
+                "retained_ids.txt:md5,aaf80accd18ae5c4b9e22b4216518df3",
+                "blobpurge_test.bam:md5,7d0e45ebbc70bc414339108e9c65532b",
+                "blobpurge_test.filtered.fasta.0123:md5,fb0c4bb4017d40b8bc3d7f499fc44470",
+                "blobpurge_test.filtered.fasta.amb:md5,c2f128dcf0a162cfb3cd207dec3a59f4",
+                "blobpurge_test.filtered.fasta.ann:md5,9df6c0078f8b4219c60ca8dd280f46bb",
+                "blobpurge_test.filtered.fasta.bwt.2bit.64:md5,bfc301049550811c62fac4b703bcf036",
+                "blobpurge_test.filtered.fasta.pac:md5,d852cefd696569848bcd0ab78e037301",
                 "blobpurge_test.busco_comparison.json:md5,c69a17e6218f67e2b7948e3c93c7aaca",
                 "blobpurge_test.busco_comparison.tsv:md5,49bd84c3d5e7647af9c2500ffb45af42",
                 "blobpurge_test.busco_comparison_mqc.json:md5,8c3b52b7540be503fa81ee9ce759c5d4",
                 "busco_plot_bacteria_odb10.txt:md5,7962acb0707dc6b49ec3bde4c07c6bad",
-                "multiqc_assembly_stats_table.txt:md5,37abe0a342c9900c2f3d5ec15d5bd983",
-                "multiqc_btk_filter_span_check_table.txt:md5,59d7c5b70ddac2ca44e4a3ebbea104c0",
+                "multiqc_assembly_stats_table.txt:md5,ed916fe7026ca9aa18ee4e8391a340e7",
+                "multiqc_btk_filter_span_check_table.txt:md5,2639395d9be57bf8d3e2cace764a2164",
                 "multiqc_busco.txt:md5,d717f3a28487906954abc55368f23163",
                 "multiqc_busco_comparison_table.txt:md5,708eb4e0ca3a79c242e89adac34f6016",
                 "multiqc_citations.txt:md5,c9123d924832a4109b6bb6ac68b22929",
-                "multiqc_general_stats.txt:md5,033f901c5166c2644fb2c32b46a356d0",
-                "multiqc_samtools_flagstat.txt:md5,413ebe6535f4de0fa806b1702a97fa46",
-                "multiqc_samtools_idxstats.txt:md5,c33e8fed5d8b6a37cf2df47353ee82b3",
-                "multiqc_samtools_stats.txt:md5,43342121357758fbd3ac92cf9f3170f9",
-                "samtools-flagstat-pct-table.txt:md5,8a6a970730ce2ddb6eade6c1d9cb68c2",
-                "samtools-flagstat-table.txt:md5,6473e466e4c6b1e865ede2d06f875cb1",
-                "samtools-idxstats-mapped-reads-plot_Normalised_Counts.txt:md5,1468991c26eb14c28aaa7fd28b680abb",
-                "samtools-idxstats-mapped-reads-plot_Observed_over_Expected_Counts.txt:md5,522cc0fa0d6f884e04b6d13beac1cb0d",
-                "samtools-idxstats-mapped-reads-plot_Raw_Counts.txt:md5,9b369a35f4ad1bd66f96d6eb5470749d",
-                "samtools-stats-dp.txt:md5,b98854eb1302ca5a0494a201fa3ca7bc",
-                "samtools_alignment_plot.txt:md5,481e138d24b5ea27e02c5a9d2b289701",
-                "blobpurge_test.calcuts.log:md5,d43c7d416276ea77cdcdfbf31bce6f6e",
+                "multiqc_general_stats.txt:md5,84dbb052079721ee3a8da3fef7e0caf2",
+                "multiqc_samtools_flagstat.txt:md5,c224347d4cd6bd88d767e4ec76df2fa7",
+                "multiqc_samtools_idxstats.txt:md5,5848ffd47e41a47f21bd06a578efacff",
+                "multiqc_samtools_stats.txt:md5,15132b0a0ea112eb3524c47f62963925",
+                "samtools-flagstat-pct-table.txt:md5,64f20dad1cabcefd657bac8e8afce5a9",
+                "samtools-flagstat-table.txt:md5,752b8e681c8da8c3813b428b5d8d6455",
+                "samtools-idxstats-mapped-reads-plot_Normalised_Counts.txt:md5,4eaf81f14dfa98cf967cf56f455a7ee6",
+                "samtools-idxstats-mapped-reads-plot_Observed_over_Expected_Counts.txt:md5,de9f54257658aaa665057baa2f54b412",
+                "samtools-idxstats-mapped-reads-plot_Raw_Counts.txt:md5,48d50506af8216229b8e6a7d4e534095",
+                "samtools-stats-dp.txt:md5,941ecd383302aecf8286ae3668e45d84",
+                "samtools_alignment_plot.txt:md5,254b1d7127d4f38af570bc33803f3ab6",
+                "blobpurge_test.subset.sorted.bam:md5,8a2e2ebd72353cfa522d18d029ed5932",
+                "blobpurge_test.subset.sorted.bam.bai:md5,8527addb8f3c2c1eb1ada4768787d4b7",
+                "blobpurge_test.nuclear.fasta:md5,af61347f1e38f221086396ddf1c41ccb",
+                "blobpurge_test.nuclear_ids.txt:md5,b8d841d853bb1bc7ebd1b3b469c531e5",
+                "blobpurge_test.organelle.fasta:md5,f6c2ff884d04478de4627048db798812",
+                "blobpurge_test.organelle_R1.fastq.gz:md5,6d7d1b2bfce8b9114dd86e990093a473",
+                "blobpurge_test.organelle_R2.fastq.gz:md5,7def15a3f20cb282c1a0e302f0e5fd2a",
+                "blobpurge_test.organelle_ids.txt:md5,2efce8c3277f580b356e2ff562b1a013",
+                "blobpurge_test.organelle_ref.paf:md5,1b8987e5a94af587ddeb3f9ed257a271",
+                "blobpurge_test.organelle_report.json:md5,8c228a2aee6b1d36a85e3e3c323f4bee",
+                "blobpurge_test.organelle_report.mqc.json:md5,de3308424c73e9eb6e43eb5bf6d970db",
+                "blobpurge_test.purge_dups.merged.fasta:md5,d1bfc8e360ae014c7afe8ed87b5b24b2",
+                "blobpurge_test.purge_haplotigs.merged.fasta:md5,67d7001f8db6af8d643161021ba45a6d",
+                "blobpurge_test.subset.sorted.bam:md5,d0ef9f31c74196569a3044d91caf30f8",
+                "blobpurge_test.subset.sorted.bam.bai:md5,297ec5eb29c321ea61be1271ce0290fb",
+                "blobpurge_test.calcuts.log:md5,12c0824dd279a142ee54107f9a901b3f",
                 "blobpurge_test.cutoffs:md5,50895526d93dbca6dd06c0e77d4983e8",
                 "blobpurge_test.dups.bed:md5,893c165a5e26a4e1261b75a6eab8f675",
-                "blobpurge_test.hist.png:md5,a506bf0551bc31aea52076ae550296dc",
-                "blobpurge_test.ngscstat.base.cov:md5,d6c4ed97bd524c0aec211602872bfbc1",
-                "blobpurge_test.ngscstat.stat:md5,a168b4dd0d81ccbfacc20354244e80ca",
+                "blobpurge_test.hist.png:md5,f85d0d7854cece7c5b9774b16d5a0342",
+                "blobpurge_test.ngscstat.base.cov:md5,cf5b26f4d5f9b362210489e64ac5f0c9",
+                "blobpurge_test.ngscstat.stat:md5,078f26863b7bb7591b62c3643a4158f8",
                 "blobpurge_test.purge_dups.log:md5,77a60d9cb202ee5067c2254fba8bac52",
                 "blobpurge_test.purged.fasta:md5,43e15e50ec8a681af45a90b941401490",
                 "blobpurge_test.purged_haplotigs.fasta:md5,4d7675b092e0a59f1d08c1c95018268e",
                 "blobpurge_test.split.fasta:md5,48016dc47ce2880455e4200c2ea8f431",
                 "blobpurge_test.split.self.paf.gz:md5,92b908e0f2c6f5daf0a17712d3694f74",
-                "blobpurge_test.bam.histogram.200.png:md5,0ad52d2cb08ef69698ab1ee60190d45e",
-                "blobpurge_test.coverage_stats.csv:md5,1714258b266481f640c5873166fa297c",
+                "blobpurge_test.bam.histogram.200.png:md5,c3e222028587a61ba0aed52c2ec48074",
+                "blobpurge_test.coverage_stats.csv:md5,5aedb853daaba0bd1819bd18d0ad9969",
                 "blobpurge_test.curated.fasta:md5,af61347f1e38f221086396ddf1c41ccb",
                 "blobpurge_test.curated.haplotigs.fasta:md5,d41d8cd98f00b204e9800998ecf8427e",
-                "blobpurge_test.cutoffs.json:md5,5595a3e4d6b2b98c3edce05a177f9538",
-                "blobpurge_test.depth_hist.tsv:md5,0e0a46f6b0daaacb2348f7c2afde3049",
-                "blobpurge_test.bam:md5,8979b866015b8cb759c800ba969499e8",
-                "blobpurge_test.bam.bai:md5,e4bd05e06b772926aad34c0ee1d694c4",
-                "blobpurge_test.flagstat:md5,554a1f56806ff8a554334dab2d5e1890",
-                "blobpurge_test.idxstats:md5,6e5e69346e54af8495bd36426c09e085",
-                "blobpurge_test.stats:md5,316753949ef223e27a54fc48c68cdde5",
-                "blobpurge_test.tsv:md5,09bf3ee144fa859f025fa6d4dc65853a"
+                "blobpurge_test.cutoffs.json:md5,a29fb626d2683ba072c342861dbd3643",
+                "blobpurge_test.depth_hist.tsv:md5,0389278791ea51ff96cc7cb0e4741cb3",
+                "blobpurge_test.bam:md5,fa1c821e3d3782ee8f16f80dcce477b7",
+                "blobpurge_test.bam.bai:md5,a13fec3d0820fbe63d17fcb1aec79713",
+                "blobpurge_test.flagstat:md5,c92788f234328bb7f03eadf295f577d4",
+                "blobpurge_test.idxstats:md5,56552af179a74f14d0206094f6c64e90",
+                "blobpurge_test.stats:md5,c548470d6805c841e92fcb162288a25c",
+                "blobpurge_test.tsv:md5,84433b26d86f3bf50967aa37afbf2532",
+                "blobpurge_test.txt:md5,bbc3754f258672a16796bd98953c770b"
             ]
         ],
-        "timestamp": "2026-08-07T19:29:32.174970392",
+        "timestamp": "2026-08-10T13:47:55.790459079",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"
