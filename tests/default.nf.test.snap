@@ -929,6 +929,9 @@
                 "samtools/blobpurge_test.bam.bai",
                 "samtools/blobpurge_test.flagstat",
                 "samtools/blobpurge_test.idxstats",
+                "samtools/blobpurge_test.namesorted.bam",
+                "samtools/blobpurge_test.nuclear.namesorted.bam",
+                "samtools/blobpurge_test.organelle.namesorted.bam",
                 "samtools/blobpurge_test.stats",
                 "samtools/blobpurge_test.tsv",
                 "samtools/blobpurge_test.txt"
@@ -1011,16 +1014,19 @@
                 "blobpurge_test.curated.haplotigs.fasta:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "blobpurge_test.cutoffs.json:md5,a29fb626d2683ba072c342861dbd3643",
                 "blobpurge_test.depth_hist.tsv:md5,0389278791ea51ff96cc7cb0e4741cb3",
-                "blobpurge_test.bam:md5,fa1c821e3d3782ee8f16f80dcce477b7",
+                "blobpurge_test.bam:md5,33c61a356a2299e570f5e434b7e16f15",
                 "blobpurge_test.bam.bai:md5,a13fec3d0820fbe63d17fcb1aec79713",
                 "blobpurge_test.flagstat:md5,c92788f234328bb7f03eadf295f577d4",
                 "blobpurge_test.idxstats:md5,56552af179a74f14d0206094f6c64e90",
+                "blobpurge_test.namesorted.bam:md5,6f087c202ec84f151d9b60ba869aa43a",
+                "blobpurge_test.nuclear.namesorted.bam:md5,242ff45ff6527e0ab7358020080bc5c3",
+                "blobpurge_test.organelle.namesorted.bam:md5,2d0f625fd11ad081a6a64604c7267af2",
                 "blobpurge_test.stats:md5,c548470d6805c841e92fcb162288a25c",
                 "blobpurge_test.tsv:md5,84433b26d86f3bf50967aa37afbf2532",
                 "blobpurge_test.txt:md5,bbc3754f258672a16796bd98953c770b"
             ]
         ],
-        "timestamp": "2026-08-10T14:27:34.788084045",
+        "timestamp": "2026-08-10T15:39:13.112107806",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

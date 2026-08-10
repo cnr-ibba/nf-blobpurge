@@ -41,6 +41,8 @@ Runs `blobtools filter` against the existing BlobDir named in the samplesheet, u
 <summary>Output files</summary>
 
 - `samtools/` or `bwamem2/`: sorted/indexed BAM used for coverage (CRAM subset, or fresh bwa-mem2 mapping onto the filtered assembly).
+- `samtools/<sample_id>.namesorted.bam`: the same BAM, name-sorted, feeding `ngscstat` below.
+- `samtools/<sample_id>.nuclear.namesorted.bam`, `<sample_id>.organelle.namesorted.bam`: only present with `--run_organelle_isolation`; the nuclear-only and organelle-only BAM subsets, name-sorted, feeding the organelle-free `ngscstat` re-derivation and organelle read export (see [Organelle isolation](#organelle-isolation)).
 - `purgedups/<sample_id>.ngscstat.stat`, `<sample_id>.ngscstat.base.cov`: purge_dups Illumina coverage stats (`ngscstat`).
 
 </details>
