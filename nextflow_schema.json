@@ -91,6 +91,13 @@
                     "format": "directory-path",
                     "description": "Optional path to a local, pre-downloaded BUSCO lineages/datasets directory. If not given, BUSCO downloads lineage data on demand.",
                     "fa_icon": "fas fa-folder-open"
+                },
+                "busco_min_contig_length": {
+                    "type": "integer",
+                    "default": 1000,
+                    "minimum": 0,
+                    "description": "Minimum contig length (bp) to include when running BUSCO on the 'raw' assembly stage only (filtered/purge_dups/purge_haplotigs stages are never filtered). Guards against BUSCO's single-threaded post-processing running out of memory on highly fragmented raw assemblies with large numbers of micro-contigs. Does not affect ASSEMBLY_STATS or the report's span/N50 numbers, which are always computed from the full, unfiltered raw assembly. Set to 0 to disable filtering entirely.",
+                    "fa_icon": "fas fa-ruler-horizontal"
                 }
             }
         },

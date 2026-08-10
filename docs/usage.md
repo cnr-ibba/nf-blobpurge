@@ -64,6 +64,10 @@ python3 -c "import gzip, json, os; p = '<blobdir>/meta.json'; p = p if os.path.e
 
 Mandatory, comma-separated, e.g. `--busco_lineages "chlorophyta_odb12,viridiplantae_odb12"`. There is no default lineage, and `--auto-lineage` is never used, so results stay comparable and reproducible across stages and runs. Use `--busco_lineages_path` to point at a local, pre-downloaded lineage directory instead of letting BUSCO download on demand.
 
+### `--busco_min_contig_length`
+
+Default `1000`. Minimum contig length (bp) a contig must have to be included when BUSCO is run on the **raw** assembly stage only -- filtered/purge_dups/purge_haplotigs stages are never filtered, since they have already shed most junk contigs upstream via `BTK_FILTER`/`purge_dups`. This exists because BUSCO's own single-threaded Python post-processing of miniprot's candidate alignments can run out of memory (exit 137) on fragmented raw assemblies with a very large number of micro-contigs that individually can never hold a complete gene model, but still get searched and swell that in-memory candidate-alignment step. Reducing `--cpu`/process resources does not help -- the OOM happens after `miniprot_align` completes, not in the multi-threaded aligner itself. This only changes the FASTA fed to `BUSCO` for the raw stage; `ASSEMBLY_STATS` and the report's span/N50 numbers are always computed from the full, unfiltered raw assembly. When contigs are actually excluded for a sample, this is logged as a caveat (both to stderr and in that sample's report). Set `--busco_min_contig_length 0` to disable filtering entirely.
+
 ### purge_dups, purge_haplotigs, and their caveats
 
 Coverage for `purge_dups` is computed with `ngscstat`, purge_dups' Illumina/short-read coverage path -- explicitly less exercised by the purge_dups authors than the PacBio path (`pbcstat`). This is logged as a caveat by the pipeline (both to stderr and in the final report) rather than presented as an equivalent, drop-in replacement.

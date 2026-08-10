@@ -24,6 +24,9 @@
                 "COMPARE_BUSCO": {
                     "python": "3.12.2"
                 },
+                "FILTER_MIN_CONTIG_LENGTH": {
+                    "python": "3.12.2"
+                },
                 "PURGEDUPS_CALCUTS": {
                     "purge_dups": "1.2.5"
                 },
@@ -766,6 +769,10 @@
                 "compare/blobpurge_test.busco_comparison.json",
                 "compare/blobpurge_test.busco_comparison.tsv",
                 "compare/blobpurge_test.busco_comparison_mqc.json",
+                "filter",
+                "filter/blobpurge_test.raw.contig_length_filter.json",
+                "filter/blobpurge_test.raw.contig_length_filter_mqc.json",
+                "filter/blobpurge_test.raw.length_filtered.fasta",
                 "multiqc",
                 "multiqc/multiqc_data",
                 "multiqc/multiqc_data/busco_plot_bacteria_odb10.txt",
@@ -777,6 +784,7 @@
                 "multiqc/multiqc_data/multiqc_busco.txt",
                 "multiqc/multiqc_data/multiqc_busco_comparison_table.txt",
                 "multiqc/multiqc_data/multiqc_citations.txt",
+                "multiqc/multiqc_data/multiqc_contig_length_filter_table.txt",
                 "multiqc/multiqc_data/multiqc_data.json",
                 "multiqc/multiqc_data/multiqc_general_stats.txt",
                 "multiqc/multiqc_data/multiqc_samtools_flagstat.txt",
@@ -798,6 +806,7 @@
                 "multiqc/multiqc_plots/pdf/busco_comparison_table.pdf",
                 "multiqc/multiqc_plots/pdf/busco_plot_bacteria_odb10-cnt.pdf",
                 "multiqc/multiqc_plots/pdf/busco_plot_bacteria_odb10-pct.pdf",
+                "multiqc/multiqc_plots/pdf/contig_length_filter_table.pdf",
                 "multiqc/multiqc_plots/pdf/samtools-flagstat-pct-table.pdf",
                 "multiqc/multiqc_plots/pdf/samtools-flagstat-table.pdf",
                 "multiqc/multiqc_plots/pdf/samtools-idxstats-mapped-reads-plot_Normalised_Counts-cnt.pdf",
@@ -815,6 +824,7 @@
                 "multiqc/multiqc_plots/png/busco_comparison_table.png",
                 "multiqc/multiqc_plots/png/busco_plot_bacteria_odb10-cnt.png",
                 "multiqc/multiqc_plots/png/busco_plot_bacteria_odb10-pct.png",
+                "multiqc/multiqc_plots/png/contig_length_filter_table.png",
                 "multiqc/multiqc_plots/png/samtools-flagstat-pct-table.png",
                 "multiqc/multiqc_plots/png/samtools-flagstat-table.png",
                 "multiqc/multiqc_plots/png/samtools-idxstats-mapped-reads-plot_Normalised_Counts-cnt.png",
@@ -832,6 +842,7 @@
                 "multiqc/multiqc_plots/svg/busco_comparison_table.svg",
                 "multiqc/multiqc_plots/svg/busco_plot_bacteria_odb10-cnt.svg",
                 "multiqc/multiqc_plots/svg/busco_plot_bacteria_odb10-pct.svg",
+                "multiqc/multiqc_plots/svg/contig_length_filter_table.svg",
                 "multiqc/multiqc_plots/svg/samtools-flagstat-pct-table.svg",
                 "multiqc/multiqc_plots/svg/samtools-flagstat-table.svg",
                 "multiqc/multiqc_plots/svg/samtools-idxstats-mapped-reads-plot_Normalised_Counts-cnt.svg",
@@ -875,7 +886,7 @@
                 "samtools/blobpurge_test.tsv"
             ],
             [
-                "blobpurge_test_blobpurge.html:md5,ec66fc4cbd4bfd85394ff0bbe34b8da6",
+                "blobpurge_test_blobpurge.html:md5,024ef4e4653a4452574930ba49afa9e6",
                 "blobpurge_test.filtered.assembly_stats_mqc.json:md5,ef06770508b0d8b0a6e0a2f774e6097a",
                 "blobpurge_test.filtered.stats.json:md5,bd1549a3b8e92f46bc401296ec9ee36c",
                 "blobpurge_test.purge_dups.assembly_stats_mqc.json:md5,d6f07c7ad2ee30e0f615cdbbeb319599",
@@ -899,12 +910,16 @@
                 "blobpurge_test.busco_comparison.json:md5,c69a17e6218f67e2b7948e3c93c7aaca",
                 "blobpurge_test.busco_comparison.tsv:md5,49bd84c3d5e7647af9c2500ffb45af42",
                 "blobpurge_test.busco_comparison_mqc.json:md5,8c3b52b7540be503fa81ee9ce759c5d4",
+                "blobpurge_test.raw.contig_length_filter.json:md5,cd011e962ac243e0ec8a65cbfbd22a21",
+                "blobpurge_test.raw.contig_length_filter_mqc.json:md5,43174815c35b7326a075fe14b419e804",
+                "blobpurge_test.raw.length_filtered.fasta:md5,67555c9e7935996c2d8a417d4d85ad47",
                 "busco_plot_bacteria_odb10.txt:md5,7962acb0707dc6b49ec3bde4c07c6bad",
                 "multiqc_assembly_stats_table.txt:md5,37abe0a342c9900c2f3d5ec15d5bd983",
                 "multiqc_btk_filter_span_check_table.txt:md5,59d7c5b70ddac2ca44e4a3ebbea104c0",
                 "multiqc_busco.txt:md5,d717f3a28487906954abc55368f23163",
                 "multiqc_busco_comparison_table.txt:md5,708eb4e0ca3a79c242e89adac34f6016",
                 "multiqc_citations.txt:md5,c9123d924832a4109b6bb6ac68b22929",
+                "multiqc_contig_length_filter_table.txt:md5,2bad2ce33681dbd979d74013bc044270",
                 "multiqc_general_stats.txt:md5,033f901c5166c2644fb2c32b46a356d0",
                 "multiqc_samtools_flagstat.txt:md5,413ebe6535f4de0fa806b1702a97fa46",
                 "multiqc_samtools_idxstats.txt:md5,c33e8fed5d8b6a37cf2df47353ee82b3",
@@ -941,7 +956,7 @@
                 "blobpurge_test.tsv:md5,09bf3ee144fa859f025fa6d4dc65853a"
             ]
         ],
-        "timestamp": "2026-08-07T19:29:32.174970392",
+        "timestamp": "2026-08-10T13:24:35.373373541",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

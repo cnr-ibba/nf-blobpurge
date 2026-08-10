@@ -91,12 +91,14 @@ Only produced when `--run_purge_haplotigs` is `true` (default) and a usable bimo
 
 - `busco/<sample_id>.<stage>.<lineage>_busco/`: full BUSCO output directory per stage x lineage.
 - `busco/<sample_id>.<stage>.<lineage>.short_summary.json`: BUSCO's own summary JSON, the source of every number used downstream.
+- `filter/<sample_id>.raw.length_filtered.fasta`: the raw-stage assembly with contigs shorter than `--busco_min_contig_length` removed, used only as BUSCO's raw-stage input (not used anywhere else -- `assembly/` and the report's span/N50 always reflect the full, unfiltered raw assembly).
+- `filter/<sample_id>.raw.contig_length_filter.json`, `<sample_id>.raw.contig_length_filter_mqc.json`: how many contigs/bp were excluded from the raw-stage BUSCO input and why.
 - `compare/<sample_id>.busco_comparison.tsv`, `<sample_id>.busco_comparison.json`: one comparative table per sample, across all stages and lineages, plus the per-lineage duplication-drop figures used in the report's verdict.
 - `compare/<sample_id>.busco_comparison_mqc.json`: the same per-stage x lineage rows, reformatted as a MultiQC custom-content table.
 
 </details>
 
-Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineage`) against the raw, filtered, purge_dups and (if enabled) purge_haplotigs assemblies.
+Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineage`) against the raw, filtered, purge_dups and (if enabled) purge_haplotigs assemblies -- except that BUSCO's raw-stage input is first length-filtered per `--busco_min_contig_length` (default 1000bp) to avoid an out-of-memory failure on highly fragmented assemblies; `assembly/` and the report's span/N50 figures are unaffected and always reflect the full, unfiltered raw assembly.
 
 ### blobpurge report
 
