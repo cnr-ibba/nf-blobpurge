@@ -1,5 +1,5 @@
 process BUSCO {
-    tag "${meta.id}:${stage}:${lineage}"
+    tag "${meta.id}:${stage}:${chunk_label}:${lineage}"
     label 'process_high'
 
     conda "${moduleDir}/environment.yml"
@@ -9,21 +9,27 @@ process BUSCO {
 
     // Always run with an explicit lineage: --auto-lineage is never used, so
     // results are comparable across stages and reproducible run to run.
+    // Every (meta, stage) fasta is pre-split into span-balanced chunks by
+    // SPLIT_ASSEMBLY_FOR_BUSCO upstream (chunk_label is "1of1" when
+    // splitting is disabled/not needed) -- chunk_label only disambiguates
+    // this task's output filenames; per-chunk results are pooled back into
+    // one score per (meta, stage, lineage) by MERGE_BUSCO_CHUNKS.
     input:
-    tuple val(meta), val(stage), path(fasta), val(lineage)
+    tuple val(meta), val(stage), path(fasta), val(chunk_label), val(lineage)
     path busco_lineages_path
 
     output:
-    tuple val(meta), val(stage), val(lineage), path("${meta.id}.${stage}.${lineage}.short_summary.json"), emit: short_summary
-    tuple val(meta), val(stage), val(lineage), path("short_summary.${meta.id}.${stage}.${lineage}.txt"),  emit: short_summary_txt
-    tuple val(meta), val(stage), val(lineage), path("${meta.id}.${stage}.${lineage}_busco"),               emit: full_output
+    tuple val(meta), val(stage), val(lineage), val(chunk_label), path("${meta.id}.${stage}.${chunk_label}.${lineage}.short_summary.json"), emit: short_summary
+    tuple val(meta), val(stage), val(lineage), val(chunk_label), path("short_summary.${meta.id}.${stage}.${chunk_label}.${lineage}.txt"),  emit: short_summary_txt
+    tuple val(meta), val(stage), val(lineage), val(chunk_label), path("${meta.id}.${stage}.${chunk_label}.${lineage}_busco"),               emit: full_output
+    tuple val(meta), val(stage), val(lineage), val(chunk_label), path("${meta.id}.${stage}.${chunk_label}.${lineage}.full_table.tsv"),       emit: full_table
     path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
-    def prefix = "${meta.id}.${stage}.${lineage}"
+    def prefix = "${meta.id}.${stage}.${chunk_label}.${lineage}"
     def offline_args = busco_lineages_path ? "--offline --download_path ${busco_lineages_path}" : ''
     """
     busco \\
@@ -37,6 +43,7 @@ process BUSCO {
 
     mv ${prefix}/short_summary.*.json ${prefix}.short_summary.json
     cp ${prefix}/short_summary.*.txt short_summary.${prefix}.txt
+    cp ${prefix}/run_${lineage}/full_table.tsv ${prefix}.full_table.tsv
     mv ${prefix} ${prefix}_busco
 
     cat <<-END_VERSIONS > versions.yml
@@ -46,9 +53,10 @@ process BUSCO {
     """
 
     stub:
-    def prefix = "${meta.id}.${stage}.${lineage}"
+    def prefix = "${meta.id}.${stage}.${chunk_label}.${lineage}"
     """
     mkdir ${prefix}_busco
+    printf '1at100\\tComplete\\tchunk_seq\\t1\\t100\\t+\\t50\\t100\\n' > ${prefix}.full_table.tsv
     cat <<-END_JSON > ${prefix}.short_summary.json
     {"results": {"Complete percentage": 95.0, "Single copy percentage": 90.0, "Multi copy percentage": 5.0, "Fragmented percentage": 2.0, "Missing percentage": 3.0, "n_markers": 100, "Complete": 95, "Multi copy": 5, "dataset": "${lineage}"}}
     END_JSON
