@@ -164,10 +164,12 @@ workflow BLOBPURGE {
 
     BUSCO_COMPARE(ch_stage_fastas)
     ch_versions = ch_versions.mix(BUSCO_COMPARE.out.versions)
+    ch_caveats  = ch_caveats.mix(BUSCO_COMPARE.out.caveats)
     ch_multiqc_files = ch_multiqc_files.mix(
         BUSCO_COMPARE.out.short_summaries_txt.map { _meta, _stage, _lineage, summary -> summary }
     )
     ch_multiqc_files = ch_multiqc_files.mix(BUSCO_COMPARE.out.comparison_mqc.map { _meta, f -> f })
+    ch_multiqc_files = ch_multiqc_files.mix(BUSCO_COMPARE.out.length_filter_mqc)
 
     //
     // STEP 6: per-sample report
