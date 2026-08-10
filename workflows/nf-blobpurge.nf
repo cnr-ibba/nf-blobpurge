@@ -7,6 +7,9 @@ include { BTK_FILTER              } from '../modules/local/btk_filter/main'
 include { ASSEMBLY_STATS          } from '../modules/local/assembly_stats/main'
 include { BLOBPURGE_REPORT        } from '../modules/local/blobpurge_report/main'
 include { READ_COVERAGE           } from '../subworkflows/local/read_coverage'
+include { ORGANELLE_ISOLATE       } from '../subworkflows/local/organelle_isolate'
+include { ORGANELLE_MERGE_FASTA as ORGANELLE_MERGE_FASTA_PURGEDUPS      } from '../modules/local/organelle_merge_fasta/main'
+include { ORGANELLE_MERGE_FASTA as ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS } from '../modules/local/organelle_merge_fasta/main'
 include { PURGE_DUPS              } from '../subworkflows/local/purge_dups'
 include { PURGE_HAPLOTIGS         } from '../subworkflows/local/purge_haplotigs'
 include { BUSCO_COMPARE           } from '../subworkflows/local/busco_compare'
@@ -69,28 +72,82 @@ workflow BLOBPURGE {
     ch_multiqc_files = ch_multiqc_files.mix(READ_COVERAGE.out.multiqc_files)
 
     //
+    // STEP 2.5: organelle contig isolation (optional). Keeps organelle-like
+    // contigs (high copy number -> extreme coverage) out of purge_dups'/
+    // purge_haplotigs' coverage-cutoff estimation, without re-mapping: it
+    // works from READ_COVERAGE's own BAM. Off by default -- when off, every
+    // channel below is a plain alias of today's channels, so the DAG and
+    // pipeline behaviour are unchanged.
+    //
+    def ch_fasta_for_purge    = BTK_FILTER.out.fasta
+    def ch_stat_for_purge     = READ_COVERAGE.out.stat
+    def ch_base_cov_for_purge = READ_COVERAGE.out.base_cov
+    def ch_bam_for_purge      = READ_COVERAGE.out.bam
+    def ch_organelle_fasta    = channel.empty() // [ meta, organelle_fasta ], only populated when the feature is on
+
+    if (params.run_organelle_isolation) {
+        def ch_organelle_reference = params.organelle_reference_fasta
+            ? Channel.fromPath(params.organelle_reference_fasta, checkIfExists: true)
+            : Channel.fromPath("${projectDir}/assets/NO_FILE")
+
+        ch_samplesheet
+            .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> meta }
+            .combine(ch_organelle_reference)
+            .set { ch_organelle_reference_per_sample }
+
+        ORGANELLE_ISOLATE(
+            BTK_FILTER.out.fasta,
+            READ_COVERAGE.out.bam,
+            ch_organelle_reference_per_sample
+        )
+        ch_versions = ch_versions.mix(ORGANELLE_ISOLATE.out.versions)
+        ch_caveats  = ch_caveats.mix(ORGANELLE_ISOLATE.out.caveats)
+        ch_multiqc_files = ch_multiqc_files.mix(ORGANELLE_ISOLATE.out.multiqc_files)
+
+        ch_fasta_for_purge    = ORGANELLE_ISOLATE.out.nuclear_fasta
+        ch_stat_for_purge     = ORGANELLE_ISOLATE.out.stat
+        ch_base_cov_for_purge = ORGANELLE_ISOLATE.out.base_cov
+        ch_bam_for_purge      = ORGANELLE_ISOLATE.out.bam
+        ch_organelle_fasta    = ORGANELLE_ISOLATE.out.organelle_fasta
+    }
+
+    //
     // STEP 3: purge_dups (always run)
     //
     PURGE_DUPS(
-        BTK_FILTER.out.fasta,
-        READ_COVERAGE.out.stat,
-        READ_COVERAGE.out.base_cov
+        ch_fasta_for_purge,
+        ch_stat_for_purge,
+        ch_base_cov_for_purge
     )
     ch_versions = ch_versions.mix(PURGE_DUPS.out.versions)
     ch_caveats  = ch_caveats.mix(PURGE_DUPS.out.caveats)
-    ch_stage_fastas = ch_stage_fastas.mix(PURGE_DUPS.out.purged_fasta.map { meta, fasta -> [ meta, 'purge_dups', fasta ] })
+
+    def ch_purge_dups_stage_fasta = PURGE_DUPS.out.purged_fasta
+    if (params.run_organelle_isolation) {
+        ORGANELLE_MERGE_FASTA_PURGEDUPS(PURGE_DUPS.out.purged_fasta.join(ch_organelle_fasta))
+        ch_versions = ch_versions.mix(ORGANELLE_MERGE_FASTA_PURGEDUPS.out.versions)
+        ch_purge_dups_stage_fasta = ORGANELLE_MERGE_FASTA_PURGEDUPS.out.fasta
+    }
+    ch_stage_fastas = ch_stage_fastas.mix(ch_purge_dups_stage_fasta.map { meta, fasta -> [ meta, 'purge_dups', fasta ] })
 
     //
     // STEP 4: purge_haplotigs cross-check (optional, independent, in parallel to purge_dups)
     //
     if (params.run_purge_haplotigs) {
         PURGE_HAPLOTIGS(
-            BTK_FILTER.out.fasta,
-            READ_COVERAGE.out.bam
+            ch_fasta_for_purge,
+            ch_bam_for_purge
         )
         ch_versions = ch_versions.mix(PURGE_HAPLOTIGS.out.versions)
         ch_caveats  = ch_caveats.mix(PURGE_HAPLOTIGS.out.caveats)
-        ch_stage_fastas = ch_stage_fastas.mix(PURGE_HAPLOTIGS.out.purged_fasta.map { meta, fasta -> [ meta, 'purge_haplotigs', fasta ] })
+
+        def ch_purge_haplotigs_stage_fasta = PURGE_HAPLOTIGS.out.purged_fasta
+        if (params.run_organelle_isolation) {
+            ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS(PURGE_HAPLOTIGS.out.purged_fasta.join(ch_organelle_fasta))
+            ch_versions = ch_versions.mix(ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS.out.versions)
+            ch_purge_haplotigs_stage_fasta = ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS.out.fasta
+        }
+        ch_stage_fastas = ch_stage_fastas.mix(ch_purge_haplotigs_stage_fasta.map { meta, fasta -> [ meta, 'purge_haplotigs', fasta ] })
     }
 
     //
@@ -128,13 +185,20 @@ workflow BLOBPURGE {
         .groupTuple()
         .set { ch_caveats_grouped }
 
+    def ch_organelle_report = params.run_organelle_isolation
+        ? ORGANELLE_ISOLATE.out.report_json
+        : ch_samplesheet
+            .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> meta }
+            .combine(Channel.fromPath("${projectDir}/assets/NO_FILE"))
+
     ch_stats_grouped
         .join(BTK_FILTER.out.span_check)
         .join(BUSCO_COMPARE.out.comparison_json)
         .join(ch_genomescope_per_sample)
+        .join(ch_organelle_report)
         .join(ch_caveats_grouped, remainder: true)
-        .map { meta, stats, span_check, busco_json, genomescope, caveats ->
-            [ meta, stats, span_check, busco_json, genomescope, caveats ?: [] ]
+        .map { meta, stats, span_check, busco_json, genomescope, organelle_report, caveats ->
+            [ meta, stats, span_check, busco_json, genomescope, organelle_report, caveats ?: [] ]
         }
         .set { ch_for_report }
 

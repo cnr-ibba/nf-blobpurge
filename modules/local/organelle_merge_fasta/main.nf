@@ -17,15 +17,16 @@ process ORGANELLE_MERGE_FASTA {
     tuple val(meta), path(purged_fasta), path(organelle_fasta)
 
     output:
-    tuple val(meta), path("${meta.id}.merged.fasta"), emit: fasta
+    tuple val(meta), path("${prefix}.merged.fasta"), emit: fasta
     path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
+    prefix = task.ext.prefix ?: meta.id
     """
-    cat ${purged_fasta} ${organelle_fasta} > ${meta.id}.merged.fasta
+    cat ${purged_fasta} ${organelle_fasta} > ${prefix}.merged.fasta
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -34,8 +35,9 @@ process ORGANELLE_MERGE_FASTA {
     """
 
     stub:
+    prefix = task.ext.prefix ?: meta.id
     """
-    touch ${meta.id}.merged.fasta
+    touch ${prefix}.merged.fasta
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         stub: "ORGANELLE_MERGE_FASTA"
