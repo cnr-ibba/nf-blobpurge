@@ -108,6 +108,50 @@
                 }
             }
         },
+        "organelle_isolation_options": {
+            "title": "Organelle contig isolation",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Options controlling the optional isolation of organelle-like (mitochondrial/plastid) contigs, by coverage, before they reach PURGE_DUPS/PURGE_HAPLOTIGS.",
+            "properties": {
+                "run_organelle_isolation": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Detect organelle-like contigs by extreme sequencing coverage (optionally corroborated by a reference match) and exclude them from purge_dups/purge_haplotigs coverage-cutoff estimation, so their high copy number does not distort the cutoffs. Isolated contigs are re-merged into the final assembly at each stage and reported separately, not discarded; a matching paired-end read subset is also exported for use with external organelle-assembly tools.",
+                    "fa_icon": "fas fa-toggle-on"
+                },
+                "organelle_coverage_multiplier": {
+                    "type": "number",
+                    "default": 5.0,
+                    "description": "A contig is an organelle candidate if its mean depth is at least this many times the length-weighted median contig depth.",
+                    "fa_icon": "fas fa-chart-line"
+                },
+                "organelle_max_length": {
+                    "type": "integer",
+                    "description": "Optional upper bound (bp): only contigs at or below this length are eligible for organelle isolation, to avoid flagging large collapsed nuclear repeats that also show elevated coverage. Disabled (no length gate) if not set.",
+                    "fa_icon": "fas fa-ruler"
+                },
+                "organelle_reference_fasta": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Optional mitochondrial/plastid reference FASTA used to corroborate coverage-based organelle candidates via a minimap2 alignment.",
+                    "fa_icon": "far fa-file-alt"
+                },
+                "organelle_min_reference_coverage": {
+                    "type": "number",
+                    "default": 0.8,
+                    "description": "Minimum fraction of a contig's length that must align to --organelle_reference_fasta for it to be recorded as reference-matched.",
+                    "fa_icon": "fas fa-percentage"
+                },
+                "organelle_require_reference_match": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "If true and --organelle_reference_fasta is given, a contig must also be reference-matched (not just coverage-extreme) to be isolated. If false (default), the reference match is recorded but only informational.",
+                    "fa_icon": "fas fa-check-double"
+                }
+            }
+        },
         "report_options": {
             "title": "Report options",
             "type": "object",
@@ -298,6 +342,9 @@
         },
         {
             "$ref": "#/$defs/purging_options"
+        },
+        {
+            "$ref": "#/$defs/organelle_isolation_options"
         },
         {
             "$ref": "#/$defs/report_options"
