@@ -2,11 +2,19 @@
 """Generate the tiny synthetic dataset used by -profile test.
 
 Produces:
-  - assembly.fasta: 6 contigs -- a heterozygous duplicate pair (ctg1/ctg2,
+  - assembly.fasta: 7 contigs -- a heterozygous duplicate pair (ctg1/ctg2,
     8% divergent, so BTK_FILTER->purge_dups has something real to purge),
-    two unrelated unique host contigs, and two "contaminant" contigs.
+    two unrelated unique host contigs, two "contaminant" contigs, and one
+    organelle-like contig (ctg7_organelle) at extreme coverage.
   - blobdir/: a minimal, hand-built BlobDir (meta.json + identifiers/length/
     buscoregions_phylum field JSON) matching the schema BTK_FILTER expects.
+    ctg7_organelle is deliberately labelled with the same "Chlorophyta"
+    category as the other host contigs -- BTK_FILTER must NOT remove it as
+    contamination; only --run_organelle_isolation's coverage-based check
+    should flag it, which is exactly the scenario that feature exists for.
+  - organelle_reference.fasta: a 2%-divergent copy of ctg7_organelle's own
+    sequence, standing in for a real mitochondrial/plastid reference, to
+    exercise --organelle_reference_fasta's minimap2 corroboration path.
   - reads_R1.fastq.gz / reads_R2.fastq.gz: paired-end reads sampled
     independently from ctg1 and ctg2 (each at half the depth used for the
     unique host contigs) -- reflecting the real biology of an uncollapsed
@@ -19,7 +27,9 @@ Produces:
     multi-mapping ambiguity, but that MAPQ~0 signal is exactly what
     ngscstat's default -q 30 filter discards, silently zeroing out the
     coverage it was meant to produce. No reads are simulated for the
-    contaminant contigs.
+    contaminant contigs. ctg7_organelle is sampled at 8x the normal host
+    depth (well above the default --organelle_coverage_multiplier of 5x),
+    matching the high copy number of a real organelle genome.
   - samplesheet.csv
 
 Everything here is synthetic and deterministic (fixed RNG seed) -- this is a
@@ -121,6 +131,12 @@ def main():
     ctg6 = random_seq(8000)
     ctg4 = random_seq(1200)
     ctg5 = random_seq(1000)
+    # Small, but not tiny: enough sequence for minimap2 -xasm5 to align it
+    # confidently against organelle_reference.fasta below. Real organelle
+    # genomes are far larger (~15-20 kb); this fixture stays small purely to
+    # keep -profile test fast (its read depth is high enough that a
+    # realistic organelle size would dominate the fixture's runtime).
+    ctg7 = random_seq(1500)
 
     records = {
         "ctg1_host_A": ctg1,
@@ -129,8 +145,13 @@ def main():
         "ctg4_contam_bac1": ctg4,
         "ctg5_contam_bac2": ctg5,
         "ctg6_host_C": ctg6,
+        "ctg7_organelle": ctg7,
     }
     write_fasta(OUT / "assembly.fasta", records)
+
+    # 2%-divergent stand-in for a real mitochondrial/plastid reference,
+    # exercising --organelle_reference_fasta's minimap2 corroboration path.
+    write_fasta(OUT / "organelle_reference.fasta", {"mito_reference": mutate(ctg7, 0.02)})
 
     depth = 80
     all_pairs = []
@@ -138,6 +159,7 @@ def main():
     all_pairs += sample_reads(ctg2, "h2", depth=depth // 2)
     all_pairs += sample_reads(ctg3, "ctg3", depth=depth)
     all_pairs += sample_reads(ctg6, "ctg6", depth=depth)
+    all_pairs += sample_reads(ctg7, "ctg7", depth=depth * 8)
 
     r1_reads = [(name, r1) for name, r1, _r2 in all_pairs]
     r2_reads = [(name, r2) for name, _r1, r2 in all_pairs]
@@ -159,6 +181,7 @@ def main():
         "ctg2_host_A_hap": "Chlorophyta",
         "ctg3_host_B": "Chlorophyta",
         "ctg6_host_C": "Chlorophyta",
+        "ctg7_organelle": "Chlorophyta",
         "ctg4_contam_bac1": "Pseudomonadota",
         "ctg5_contam_bac2": "Bacteroidota",
     }

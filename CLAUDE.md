@@ -26,7 +26,7 @@ Known caveats the pipeline surfaces on purpose (both to stderr and in the report
 ```bash
 nextflow run . -profile test,docker --outdir <OUTDIR>
 ```
-The `test` profile uses the synthetic fixture under `assets/test/` (see `assets/test/generate_test_data.py`) — a 6-contig toy assembly with one intentional near-duplicate contig pair and two "contaminant" contigs, plus matching reads and a hand-built BlobDir. It is a plumbing fixture, not biological data. `conf/test.config` regenerates an absolute-path samplesheet at config-load time (nf-schema resolves samplesheet paths against the launch dir, not the CSV's location).
+The `test` profile uses the synthetic fixture under `assets/test/` (see `assets/test/generate_test_data.py`) — a 7-contig toy assembly with one intentional near-duplicate contig pair, two "contaminant" contigs, and one organelle-like contig at extreme coverage, plus matching reads, a hand-built BlobDir, and a synthetic organelle reference FASTA. It is a plumbing fixture, not biological data. `conf/test.config` regenerates an absolute-path samplesheet at config-load time (nf-schema resolves samplesheet paths against the launch dir, not the CSV's location).
 
 Real runs require the mandatory params:
 ```bash
