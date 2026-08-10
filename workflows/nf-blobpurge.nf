@@ -200,7 +200,13 @@ workflow BLOBPURGE {
         .join(ch_organelle_report)
         .join(ch_caveats_grouped, remainder: true)
         .map { meta, stats, span_check, busco_json, genomescope, organelle_report, caveats ->
-            [ meta, stats, span_check, busco_json, genomescope, organelle_report, caveats ?: [] ]
+            // ch_caveats is mixed from several independent, parallel subworkflows
+            // (READ_COVERAGE, ORGANELLE_ISOLATE, PURGE_DUPS, PURGE_HAPLOTIGS,
+            // BUSCO_COMPARE); their relative completion order -- and therefore
+            // groupTuple()'s arrival order -- is not deterministic between runs.
+            // Sorting here keeps the report's caveat list (and hence its md5)
+            // stable regardless of run-to-run scheduling.
+            [ meta, stats, span_check, busco_json, genomescope, organelle_report, (caveats ?: []).sort() ]
         }
         .set { ch_for_report }
 
