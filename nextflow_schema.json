@@ -98,6 +98,12 @@
                     "minimum": 0,
                     "description": "Minimum contig length (bp) to include when running BUSCO on the 'raw' assembly stage only (filtered/purge_dups/purge_haplotigs stages are never filtered). Guards against BUSCO's single-threaded post-processing running out of memory on highly fragmented raw assemblies with large numbers of micro-contigs. Does not affect ASSEMBLY_STATS or the report's span/N50 numbers, which are always computed from the full, unfiltered raw assembly. Set to 0 to disable filtering entirely.",
                     "fa_icon": "fas fa-ruler-horizontal"
+                },
+                "busco_chunk_max_span": {
+                    "type": "integer",
+                    "default": 20000000,
+                    "description": "Target maximum span (bp) per chunk when splitting each assembly stage's FASTA before running BUSCO. BUSCO's single-threaded post-processing memory scales with total genome content searched against the reference protein set (not with contig fragmentation), so every stage is split into span-balanced chunks, BUSCO is run independently per chunk, and results are merged back per-ortholog. A single contig longer than this value still becomes its own oversized chunk (contigs are never split mid-sequence). The default is an empirically-derived starting point, not a guarantee: larger/more comprehensive lineage databases may still need a smaller value. Set to <= 0 to disable splitting entirely (one chunk per stage, matching pre-splitting behaviour).",
+                    "fa_icon": "fas fa-object-ungroup"
                 }
             }
         },
