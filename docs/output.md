@@ -111,16 +111,20 @@ Only produced when `--run_purge_haplotigs` is `true` (default) and a usable bimo
 <details markdown="1">
 <summary>Output files</summary>
 
-- `busco/<sample_id>.<stage>.<lineage>_busco/`: full BUSCO output directory per stage x lineage.
-- `busco/<sample_id>.<stage>.<lineage>.short_summary.json`: BUSCO's own summary JSON, the source of every number used downstream.
 - `filter/<sample_id>.raw.length_filtered.fasta`: the raw-stage assembly with contigs shorter than `--busco_min_contig_length` removed, used only as BUSCO's raw-stage input (not used anywhere else -- `assembly/` and the report's span/N50 always reflect the full, unfiltered raw assembly).
 - `filter/<sample_id>.raw.contig_length_filter.json`, `<sample_id>.raw.contig_length_filter_mqc.json`: how many contigs/bp were excluded from the raw-stage BUSCO input and why.
+- `split/<sample_id>.<stage>.chunk<K>of<N>.fasta`: each stage's (post-length-filter, for raw) assembly split into `N` span-balanced chunks per `--busco_chunk_max_span`, so no single BUSCO invocation has to hold the whole assembly's candidate alignments in memory at once.
+- `split/<sample_id>.<stage>.split_summary.json`: how many chunks were produced and each chunk's contig count/span.
+- `busco/<sample_id>.<stage>.<chunk_label>.<lineage>_busco/`: full BUSCO output directory per stage x chunk x lineage (`<chunk_label>` is e.g. `1of4`; always `1of1` when a stage wasn't split).
+- `busco/<sample_id>.<stage>.<chunk_label>.<lineage>.short_summary.json`, `.full_table.tsv`: BUSCO's own per-chunk summary/gene-call table -- not meaningful on its own (each chunk only ever sees its own subset of contigs), kept for per-chunk debuggability.
+- `merge/<sample_id>.<stage>.<lineage>.short_summary.json`: the per-ortholog merge of that (stage, lineage)'s chunk `full_table.tsv` files back into one Complete/Duplicated/Fragmented/Missing score for the whole stage -- this, not the raw per-chunk BUSCO output, is what feeds the comparison table and report below.
+- `merge/short_summary.<sample_id>.<stage>.<lineage>.txt`: the same merged result in BUSCO's own summary-table text format, for MultiQC.
 - `compare/<sample_id>.busco_comparison.tsv`, `<sample_id>.busco_comparison.json`: one comparative table per sample, across all stages and lineages, plus the per-lineage duplication-drop figures used in the report's verdict.
 - `compare/<sample_id>.busco_comparison_mqc.json`: the same per-stage x lineage rows, reformatted as a MultiQC custom-content table.
 
 </details>
 
-Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineage`) against the raw, filtered, purge_dups and (if enabled) purge_haplotigs assemblies -- except that BUSCO's raw-stage input is first length-filtered per `--busco_min_contig_length` (default 1000bp) to avoid an out-of-memory failure on highly fragmented assemblies; `assembly/` and the report's span/N50 figures are unaffected and always reflect the full, unfiltered raw assembly.
+Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineage`) against the raw, filtered, purge_dups and (if enabled) purge_haplotigs assemblies -- except that BUSCO's raw-stage input is first length-filtered per `--busco_min_contig_length` (default 1000bp), and every stage's (post-filter) assembly is then split into span-balanced chunks per `--busco_chunk_max_span` (default 20Mbp) with results merged back per ortholog, both to avoid out-of-memory failures -- BUSCO's single-threaded post-processing scales with total genome content searched, not with fragmentation or duplication level, so even a clean, filtered assembly can exceed a memory ceiling if the chunk size isn't bounded. `assembly/` and the report's span/N50 figures are unaffected and always reflect the full, unfiltered raw assembly.
 
 ### blobpurge report
 
