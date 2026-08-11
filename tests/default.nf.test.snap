@@ -2878,7 +2878,7 @@
                 "split/blobpurge_test.raw.split_summary.json"
             ],
             [
-                "blobpurge_test_blobpurge.html:md5,5688590f6494260bca2292c07e5313ff",
+                "blobpurge_test_blobpurge.html:md5,55f57ffc0fbc6eee6b3e7de9d84d3c05",
                 "blobpurge_test.filtered.assembly_stats_mqc.json:md5,ef06770508b0d8b0a6e0a2f774e6097a",
                 "blobpurge_test.filtered.stats.json:md5,bd1549a3b8e92f46bc401296ec9ee36c",
                 "blobpurge_test.purge_dups.assembly_stats_mqc.json:md5,d6f07c7ad2ee30e0f615cdbbeb319599",
@@ -2987,7 +2987,7 @@
                 "blobpurge_test.raw.split_summary.json:md5,5654639c4f239d4b935c443732ef40f3"
             ]
         ],
-        "timestamp": "2026-08-11T16:18:24.47798168",
+        "timestamp": "2026-08-11T17:04:30.997430181",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"

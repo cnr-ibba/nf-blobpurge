@@ -125,6 +125,7 @@ workflow BLOBPURGE {
 
     ch_caveats
         .groupTuple()
+        .map { meta, caveats -> [ meta, caveats.sort() ] }
         .set { ch_caveats_grouped }
 
     ch_stats_grouped
