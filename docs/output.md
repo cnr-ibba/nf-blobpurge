@@ -9,7 +9,7 @@ This document describes the output produced by the pipeline for each sample in t
 The pipeline processes each sample through the following stages:
 
 - [BTK_FILTER](#btk_filter) - contamination removal from an existing BlobDir, with a programmatic span-conservation check
-- [Read coverage](#read-coverage) - CRAM subsetting or bwa-mem2 mapping, feeding purge_dups' `ngscstat`
+- [Read coverage](#read-coverage) - CRAM subsetting, feeding purge_dups' `ngscstat`
 - [purge_dups](#purge_dups) - haplotig purging
 - [purge_haplotigs](#purge_haplotigs) - independent cross-check of purge_dups (optional, on by default)
 - [Assembly stats](#assembly-stats) - span/N50/contig-count at every stage, machine-generated
@@ -39,7 +39,8 @@ Runs `blobtools filter` against the existing BlobDir named in the samplesheet, u
 <details markdown="1">
 <summary>Output files</summary>
 
-- `samtools/` or `bwamem2/`: sorted/indexed BAM used for coverage (CRAM subset, or fresh bwa-mem2 mapping onto the filtered assembly).
+- `cram/<sample_id>.coverage.sorted.bam(.bai)`: the reads CRAM subset onto BTK_FILTER-retained contigs, sorted and indexed.
+- `samtools/<sample_id>.bam`: the same alignment, name-sorted for `ngscstat`; `<sample_id>.flagstat`/`.idxstats`/`.stats`: QC stats for MultiQC.
 - `purgedups/<sample_id>.ngscstat.stat`, `<sample_id>.ngscstat.base.cov`: purge_dups Illumina coverage stats (`ngscstat`).
 
 </details>
