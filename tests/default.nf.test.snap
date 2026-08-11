@@ -2912,7 +2912,7 @@
                 "blobpurge_test.busco_comparison.json:md5,e3c389c58b29bb83593b85645965e681",
                 "blobpurge_test.busco_comparison.tsv:md5,4277deb18996b20738cbdcab819c8e9f",
                 "blobpurge_test.busco_comparison_mqc.json:md5,8c3b52b7540be503fa81ee9ce759c5d4",
-                "blobpurge_test.coverage.sorted.bam:md5,9efe5fb503fc074e462b41d038d49e3d",
+                "blobpurge_test.coverage.sorted.bam:md5,4f869edc86a25b6bf839054e99a0ed6c",
                 "blobpurge_test.coverage.sorted.bam.bai:md5,6a4b4ebe6bd142d0acbbbee19a6671c4",
                 "blobpurge_test.raw.contig_length_filter.json:md5,cd011e962ac243e0ec8a65cbfbd22a21",
                 "blobpurge_test.raw.contig_length_filter_mqc.json:md5,43174815c35b7326a075fe14b419e804",
@@ -2960,7 +2960,7 @@
                 "blobpurge_test.curated.haplotigs.fasta:md5,d41d8cd98f00b204e9800998ecf8427e",
                 "blobpurge_test.cutoffs.json:md5,5595a3e4d6b2b98c3edce05a177f9538",
                 "blobpurge_test.depth_hist.tsv:md5,afedda30eac6a7b7ab0eb141ae75ae2a",
-                "blobpurge_test.bam:md5,ad1da877f913ed906086eb36fb8eed9f",
+                "blobpurge_test.bam:md5,2a2f5a81d826651b91388d6520fefbe4",
                 "blobpurge_test.flagstat:md5,32d48a7875a569b911f81d9f5991b3c9",
                 "blobpurge_test.idxstats:md5,2298d58fa14e4cfb6d1e18171c6f9b76",
                 "blobpurge_test.stats:md5,5ad329410a50194ca6d84dce24e05399",
@@ -2987,7 +2987,7 @@
                 "blobpurge_test.raw.split_summary.json:md5,5654639c4f239d4b935c443732ef40f3"
             ]
         ],
-        "timestamp": "2026-08-11T14:38:59.967054215",
+        "timestamp": "2026-08-11T16:18:24.47798168",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"
