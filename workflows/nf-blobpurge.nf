@@ -25,7 +25,7 @@ include { methodsDescriptionText  } from '../subworkflows/local/utils_nfcore_nf-
 workflow BLOBPURGE {
 
     take:
-    ch_samplesheet // channel: [ meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 ]
+    ch_samplesheet // channel: [ meta, assembly, blobdir, reads_cram ]
     multiqc_config
     multiqc_logo
     multiqc_methods_description
@@ -39,28 +39,25 @@ workflow BLOBPURGE {
     def ch_caveats        = channel.empty() // [ meta, caveat_string ]
 
     ch_stage_fastas = ch_stage_fastas.mix(
-        ch_samplesheet.map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> [ meta, 'raw', assembly ] }
+        ch_samplesheet.map { meta, assembly, blobdir, reads_cram -> [ meta, 'raw', assembly ] }
     )
 
     //
     // STEP 1: contamination filtering, cross-checked against the BlobDir
     //
     BTK_FILTER(
-        ch_samplesheet.map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> [ meta, assembly, blobdir ] }
+        ch_samplesheet.map { meta, assembly, blobdir, reads_cram -> [ meta, assembly, blobdir ] }
     )
     ch_versions = ch_versions.mix(BTK_FILTER.out.versions)
     ch_stage_fastas = ch_stage_fastas.mix(BTK_FILTER.out.fasta.map { meta, fasta -> [ meta, 'filtered', fasta ] })
     ch_multiqc_files = ch_multiqc_files.mix(BTK_FILTER.out.span_check_mqc.map { _meta, f -> f })
 
     //
-    // STEP 2: read coverage for purge_dups (CRAM subset, or fresh bwa-mem2 mapping)
+    // STEP 2: read coverage for purge_dups (CRAM subset onto BTK_FILTER-retained contigs)
     //
     ch_samplesheet
-        .join(BTK_FILTER.out.fasta)
+        .map { meta, assembly, blobdir, reads_cram -> [ meta, assembly, reads_cram ] }
         .join(BTK_FILTER.out.retained_ids)
-        .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2, filtered_fasta, retained_ids ->
-            [ meta, assembly, filtered_fasta, retained_ids, reads_cram ?: [], reads_r1 ?: [], reads_r2 ?: [] ]
-        }
         .set { ch_for_coverage }
 
     READ_COVERAGE(ch_for_coverage)
@@ -122,7 +119,7 @@ workflow BLOBPURGE {
         : Channel.fromPath("${projectDir}/assets/NO_FILE")
 
     ch_samplesheet
-        .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> meta }
+        .map { meta, assembly, blobdir, reads_cram -> meta }
         .combine(ch_genomescope)
         .set { ch_genomescope_per_sample }
 

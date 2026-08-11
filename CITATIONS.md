@@ -26,10 +26,6 @@
 
   > Roach MJ, Schmidt SA, Borneman AR. Purge Haplotigs: allelic contig reassignment for third-gen diploid genome assemblies. BMC Bioinformatics. 2018 Nov 29;19(1):460. doi: 10.1186/s12859-018-2485-7. PubMed PMID: 30497373.
 
-- [bwa-mem2](https://doi.org/10.1109/IPDPS.2019.00041)
-
-  > Vasimuddin M, Misra S, Li H, Aluru S. Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. IEEE International Parallel and Distributed Processing Symposium (IPDPS), 2019. doi: 10.1109/IPDPS.2019.00041.
-
 - [SAMtools](https://pubmed.ncbi.nlm.nih.gov/33590861/)
 
   > Danecek P, Bonfield JK, Liddle J, Marshall J, Ohan V, Pollard MO, Whitwham A, Keane T, McCarthy SA, Davies RM, Li H. Twelve years of SAMtools and BCFtools. Gigascience. 2021 Feb 16;10(2):giab008. doi: 10.1093/gigascience/giab008. PubMed PMID: 33590861.

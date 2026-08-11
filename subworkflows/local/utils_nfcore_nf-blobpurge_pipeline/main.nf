@@ -90,11 +90,6 @@ workflow PIPELINE_INITIALISATION {
     //
     channel
         .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
-        .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 ->
-            validateInputSamplesheet(meta, reads_cram, reads_r1, reads_r2)
-            def new_meta = meta + [ has_cram: reads_cram as boolean ]
-            return [ new_meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 ]
-        }
         .set { ch_samplesheet }
 
     emit:
@@ -181,21 +176,6 @@ def validateInputParameters() {
 }
 
 //
-// Validate a single row from the input samplesheet
-//
-def validateInputSamplesheet(meta, reads_cram, reads_r1, reads_r2) {
-    def has_cram  = reads_cram as boolean
-    def has_fastq = (reads_r1 as boolean) && (reads_r2 as boolean)
-
-    if (!has_cram && !has_fastq) {
-        error("Please check input samplesheet -> Sample '${meta.id}' provides neither 'reads_cram' nor both 'reads_r1'/'reads_r2'. One of the two read sources is required for the purge_dups/purge_haplotigs coverage step.")
-    }
-    if (has_cram && has_fastq) {
-        log.warn("Sample '${meta.id}' provides both 'reads_cram' and 'reads_r1'/'reads_r2'; 'reads_cram' takes precedence and the FASTQ columns are ignored.")
-    }
-}
-
-//
 // Generate methods description for MultiQC
 //
 def toolCitationText() {
@@ -205,7 +185,6 @@ def toolCitationText() {
             "minimap2 (Li 2018),",
             "purge_dups (Guan et al. 2020),",
             "purge_haplotigs (Roach et al. 2018),",
-            "bwa-mem2 (Vasimuddin et al. 2019),",
             "SAMtools (Danecek et al. 2021),",
             "BUSCO (Manni et al. 2021),",
             "MultiQC (Ewels et al. 2016)",
@@ -221,7 +200,6 @@ def toolBibliographyText() {
             "<li>Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics, 34(18), 3094-3100. doi: 10.1093/bioinformatics/bty191</li>",
             "<li>Guan, D., McCarthy, S. A., Wood, J., Howe, K., Wang, Y., & Durbin, R. (2020). Identifying and removing haplotypic duplication in primary genome assemblies. Bioinformatics, 36(9), 2896-2898. doi: 10.1093/bioinformatics/btaa025</li>",
             "<li>Roach, M. J., Schmidt, S. A., & Borneman, A. R. (2018). Purge Haplotigs: allelic contig reassignment for third-gen diploid genome assemblies. BMC Bioinformatics, 19(1), 460. doi: 10.1186/s12859-018-2485-7</li>",
-            "<li>Vasimuddin, M., Misra, S., Li, H., & Aluru, S. (2019). Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. IEEE IPDPS. doi: 10.1109/IPDPS.2019.00041</li>",
             "<li>Danecek, P., Bonfield, J. K., Liddle, J., et al. (2021). Twelve years of SAMtools and BCFtools. GigaScience, 10(2), giab008. doi: 10.1093/gigascience/giab008</li>",
             "<li>Manni, M., Berkeley, M. R., Seppey, M., Simao, F. A., & Zdobnov, E. M. (2021). BUSCO Update: Novel and Streamlined Workflows along with Broader and Deeper Phylogenetic Coverage for Scoring of Eukaryotic, Prokaryotic, and Viral Genomes. Molecular Biology and Evolution, 38(10), 4647-4654. doi: 10.1093/molbev/msab199</li>",
             "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
