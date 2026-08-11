@@ -17,7 +17,7 @@ def col_hist(stat_fn, delim):
     with open(stat_fn) as f:
         for ln in f:
             lnlist =ln.strip().split(delim)
-            hists.append(int(lnlist[1])) 
+            hists.append(int(lnlist[1]))
         f.close()
     return hists
 
@@ -34,7 +34,7 @@ def get_cutoffs(con):
         return []
 
 def mk_plot(hists, cutoffs, ttle, xm, xM, ym, yM, out_fl):
-    
+
     if ttle is None:
         ttle = "read depth histogram"
     if xm is None:
@@ -50,7 +50,7 @@ def mk_plot(hists, cutoffs, ttle, xm, xM, ym, yM, out_fl):
     width = 8
     height = 6
     plt.figure(num=None, figsize=(width, height))
-    plt.plot(x, hists[xm:xM], label = "l", color="blue") # 
+    plt.plot(x, hists[xm:xM], label = "l", color="blue") #
     plt.xticks([z for z in range(xm, xM, 10)], fontsize=6, rotation=45)
     plt.xlabel("Read fold-coverage")
     plt.ylabel("Number of assembly positions")
@@ -59,7 +59,7 @@ def mk_plot(hists, cutoffs, ttle, xm, xM, ym, yM, out_fl):
     if len(cutoffs):
         for i in range(len(cutoffs)):
             plt.text(cutoffs[i], 0, str(cutoffs[i]), fontsize = 12, color=colors[i])
-            plt.axvline(x=cutoffs[i], linewidth=1, color = colors[i]) 
+            plt.axvline(x=cutoffs[i], linewidth=1, color = colors[i])
     # plt.xlim([0, max(cutoffs)*1.5])
     plt.title(ttle)
     plt.gca().xaxis.grid(True, color="black", alpha=0.2)
@@ -67,8 +67,8 @@ def mk_plot(hists, cutoffs, ttle, xm, xM, ym, yM, out_fl):
     # plt.grid(True, color="black", alpha=0.2)
     # plt.gca().get_legend().remove()
 
-    plt.tight_layout() 
-    plt.savefig(out_fl, dpi = 300) 
+    plt.tight_layout()
+    plt.savefig(out_fl, dpi = 300)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='read depth histogram plot')
@@ -86,5 +86,4 @@ if __name__ == "__main__":
     opts = parser.parse_args()
     hists = col_hist(opts.stat_fn, opts.delim)
     cutoffs = get_cutoffs(opts.con)
-    mk_plot(hists, cutoffs, opts.title, opts.xmin, opts.xmax, opts.ymin, opts.ymax, opts.out_fn) 
-
+    mk_plot(hists, cutoffs, opts.title, opts.xmin, opts.xmax, opts.ymin, opts.ymax, opts.out_fn)
