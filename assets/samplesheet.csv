@@ -1,3 +1,2 @@
-sample_id,assembly,blobdir,reads_cram,reads_r1,reads_r2
-sample1,/path/to/sample1.assembly.fasta,/path/to/sample1_blobdir,/path/to/sample1.reads.cram,,
-sample2,/path/to/sample2.assembly.fasta,/path/to/sample2_blobdir,,/path/to/sample2_R1.fastq.gz,/path/to/sample2_R2.fastq.gz
+sample_id,assembly,blobdir,reads_cram
+sample1,/path/to/sample1.assembly.fasta,/path/to/sample1_blobdir,/path/to/sample1.reads.cram

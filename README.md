@@ -19,7 +19,7 @@
 Nothing about a specific organism, taxon, or BUSCO lineage is hardcoded: the taxa to exclude and the BUSCO lineage(s) to run are mandatory parameters with no default.
 
 1. Remove contaminant contigs from an existing BlobDir, with a programmatic assembly-span conservation check (`BTK_FILTER`)
-2. Compute read coverage for purging: subset an existing reads CRAM, or map FASTQ reads fresh with `bwa-mem2` (`READ_COVERAGE`)
+2. Compute read coverage for purging: subset the existing reads CRAM produced upstream by blobtoolkit (`READ_COVERAGE`)
 3. Purge uncollapsed heterozygous haplotigs (`purge_dups`), cross-checked independently and in parallel with `purge_haplotigs`
 4. Run comparative BUSCO (never `--auto-lineage`) across the raw, filtered and purged assemblies
 5. Generate a per-sample HTML report tying span, BUSCO duplication, the GenomeScope2 comparison (if provided) and the purge_dups/purge_haplotigs cross-check together into an explicit verdict
@@ -35,11 +35,11 @@ First, prepare a samplesheet with your input data that looks as follows (see [do
 `samplesheet.csv`:
 
 ```csv
-sample_id,assembly,blobdir,reads_cram,reads_r1,reads_r2
-sample1,/data/sample1.assembly.fasta,/data/sample1_blobdir,/data/sample1.reads.cram,,
+sample_id,assembly,blobdir,reads_cram
+sample1,/data/sample1.assembly.fasta,/data/sample1_blobdir,/data/sample1.reads.cram
 ```
 
-Each row represents one already-assembled, already-blobtoolkit-classified sample: its assembly FASTA, its BlobDir, and either a reads CRAM or a pair of FASTQ files for coverage.
+Each row represents one already-assembled, already-blobtoolkit-classified sample: its assembly FASTA, its BlobDir, and the reads CRAM blobtoolkit already produced (aligned to the raw assembly) for coverage.
 
 Now, you can run the pipeline using:
 
