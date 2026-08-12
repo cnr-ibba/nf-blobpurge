@@ -9,7 +9,7 @@ allowed-tools:
   - Bash(git diff*)
   - Bash(git log*)
   - Bash(git branch*)
-  - Bash(/home/paolo/micromamba/envs/nf-core/bin/nf-core pipelines *)
+  - Bash(nf-core pipelines *)
   - Bash(nf-test *)
   - Bash(gh pr list *)
   - Bash(gh pr view *)
@@ -30,12 +30,17 @@ disable-model-invocation: true
 **not** in `allowed-tools` above, so they always trigger a permission
 prompt — those are the genuinely irreversible/public actions.
 
-`git tag`, `git push`, and `git commit`, however, are already covered by
-this repo's blanket `Bash(git *)` grant in `.claude/settings.local.json`.
-Tool permissions alone will **not** gate them. This skill's own steps must
+`git tag`, `git push`, and `git commit`, however, are commonly covered by a
+blanket `Bash(git *)` grant in `.claude/settings.local.json` — as they are
+in this repo's own checkout. That file is gitignored and machine-specific,
+so its exact contents aren't visible in this skill's diff and won't
+necessarily match on another clone. Tool permissions alone will **not**
+reliably gate these commands either way. This skill's own steps must
 therefore pause and ask for explicit confirmation before running any `git
-push` or `git tag`, rather than relying on the permission system. Treat
-this as a known limitation, not an oversight.
+push` or `git tag`, regardless of what `settings.local.json` happens to
+allow locally — the explicit-confirmation steps below are what actually
+protect these actions, not the permission config. Treat this as a known
+limitation, not an oversight.
 
 ## Resume logic
 
@@ -68,8 +73,8 @@ Show the diff of these edits before committing anything.
 ## Phase 2 — validate (safe to run automatically; local and reversible)
 
 ```bash
-/home/paolo/micromamba/envs/nf-core/bin/nf-core pipelines schema build
-/home/paolo/micromamba/envs/nf-core/bin/nf-core pipelines lint --dir .
+nf-core pipelines schema build
+nf-core pipelines lint --dir .
 nf-test test --tag pipeline --profile +docker --verbose
 ```
 
@@ -82,7 +87,7 @@ All three must pass clean before moving on.
   review rather than auto-applying prose.
 - Regenerate the RO-Crate metadata:
   ```bash
-  /home/paolo/micromamba/envs/nf-core/bin/nf-core pipelines rocrate .
+  nf-core pipelines rocrate .
   ```
 
 ## Phase 4 — Zenodo checkpoint (manual decision, no automation)
