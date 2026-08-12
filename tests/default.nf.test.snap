@@ -12,7 +12,10 @@
                     "blobtoolkit": "4.5.3"
                 },
                 "BUSCO": {
-                    "busco": "5.8.3"
+                    "busco": "6.1.0"
+                },
+                "BUSCO_DOWNLOAD": {
+                    "busco": "6.1.0"
                 },
                 "COMPARE_BUSCO": {
                     "python": "3.12.2"
@@ -24,6 +27,9 @@
                     "python": "3.12.2"
                 },
                 "MERGE_BUSCO_CHUNKS": {
+                    "python": "3.12.2"
+                },
+                "MERGE_BUSCO_DOWNLOADS": {
                     "python": "3.12.2"
                 },
                 "PURGEDUPS_CALCUTS": {
@@ -2893,22 +2899,22 @@
                 "blobpurge_test.span_check_mqc.json:md5,4b9b305c0120b98b5dccd540500cc4e2",
                 "excluded_ids.txt:md5,a285ee5da3fd3abcbb8cb6c8baab4c4c",
                 "retained_ids.txt:md5,b8d841d853bb1bc7ebd1b3b469c531e5",
-                "blobpurge_test.filtered.1of4.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.filtered.2of4.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.filtered.3of4.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.filtered.4of4.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.purge_dups.1of3.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.purge_dups.2of3.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.purge_dups.3of3.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.purge_haplotigs.1of4.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.purge_haplotigs.2of4.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.purge_haplotigs.3of4.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.purge_haplotigs.4of4.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.raw.1of5.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.raw.2of5.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.raw.3of5.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.raw.4of5.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
-                "blobpurge_test.raw.5of5.bacteria_odb10.full_table.tsv:md5,f22ff1cec76173fad38ea0137b9cc93e",
+                "blobpurge_test.filtered.1of4.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.filtered.2of4.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.filtered.3of4.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.filtered.4of4.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.purge_dups.1of3.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.purge_dups.2of3.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.purge_dups.3of3.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.purge_haplotigs.1of4.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.purge_haplotigs.2of4.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.purge_haplotigs.3of4.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.purge_haplotigs.4of4.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.raw.1of5.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.raw.2of5.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.raw.3of5.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.raw.4of5.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
+                "blobpurge_test.raw.5of5.bacteria_odb10.full_table.tsv:md5,7d23cb8fb69ebdef43e6ed83ed978b14",
                 "blobpurge_test.busco_comparison.json:md5,e3c389c58b29bb83593b85645965e681",
                 "blobpurge_test.busco_comparison.tsv:md5,4277deb18996b20738cbdcab819c8e9f",
                 "blobpurge_test.busco_comparison_mqc.json:md5,8c3b52b7540be503fa81ee9ce759c5d4",
@@ -2985,7 +2991,7 @@
                 "blobpurge_test.raw.split_summary.json:md5,5654639c4f239d4b935c443732ef40f3"
             ]
         ],
-        "timestamp": "2026-08-12T12:50:53.44799718",
+        "timestamp": "2026-08-12T16:08:19.932007218",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.04.6"
