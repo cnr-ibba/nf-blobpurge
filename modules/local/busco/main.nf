@@ -61,7 +61,7 @@ process BUSCO {
     {"results": {"Complete percentage": 95.0, "Single copy percentage": 90.0, "Multi copy percentage": 5.0, "Fragmented percentage": 2.0, "Missing percentage": 3.0, "n_markers": 100, "Complete": 95, "Multi copy": 5, "dataset": "${lineage}"}}
     END_JSON
     cat <<-END_TXT > short_summary.${prefix}.txt
-    # BUSCO version is: 5.8.3
+    # BUSCO version is: 6.1.0
     # The lineage dataset is: ${lineage} (Creation date: stub, number of genomes: 1, number of BUSCOs: 100)
 
         ***** Results: *****
