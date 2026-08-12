@@ -95,7 +95,7 @@ Optional, default `false`. When enabled, contigs with extreme sequencing coverag
 
 A contig is isolated when its mean depth is at least `--organelle_coverage_multiplier` times the length-weighted median depth across all contigs, and (if `--organelle_max_length` is set) its length is at or below that bound. If `--organelle_reference_fasta` is given, every contig is also aligned against it with minimap2 and the match fraction is recorded in the report; by default this is informational only, but `--organelle_require_reference_match` turns it into an additional hard requirement.
 
-This pipeline does not assemble organelle genomes itself. A matching paired-end read subset is exported alongside the isolated contig FASTA (`organelle/<sample_id>.organelle_R{1,2}.fastq.gz`) for use with dedicated tools such as [GetOrganelle](https://github.com/Kai-Guo/GetOrganelle), [MitoHiFi](https://github.com/marcelauliano/MitoHiFi), or [oatk](https://github.com/c-zhou/oatk).
+This pipeline does not assemble organelle genomes itself. A matching paired-end read subset is exported alongside the isolated contig FASTA (`organelle/<sample_id>.organelle_R{1,2}.fastq.gz`) for use with dedicated tools such as [GetOrganelle](https://github.com/Kinggerm/GetOrganelle), [MitoHiFi](https://github.com/marcelauliano/MitoHiFi), or [oatk](https://github.com/c-zhou/oatk).
 
 ### `--genomescope_summary`
 

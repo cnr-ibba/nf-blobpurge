@@ -11,10 +11,11 @@ process ORGANELLE_MERGE_FASTA {
     // so they don't distort coverage-cutoff estimation) back into each purge
     // stage's FASTA -- they are real assembly content, not contamination,
     // and stay part of the final assembly. Reuses the python:3.12 image
-    // already vendored for BLOBPURGE_REPORT purely as a container with `cat`
-    // available; no python is actually invoked (the biocontainers python:3.12
-    // image is BusyBox-based, not GNU coreutils -- versions.yml reports the
-    // BusyBox version accordingly, not a "coreutils" version).
+    // already vendored for BLOBPURGE_REPORT purely as a container with
+    // `awk`/`cat` available; no python is actually invoked (the
+    // biocontainers python:3.12 image is BusyBox-based, not GNU coreutils --
+    // versions.yml reports the BusyBox version accordingly, not a
+    // "coreutils" version).
     input:
     tuple val(meta), path(purged_fasta), path(organelle_fasta)
 
@@ -28,7 +29,11 @@ process ORGANELLE_MERGE_FASTA {
     script:
     prefix = task.ext.prefix ?: meta.id
     """
-    cat ${purged_fasta} ${organelle_fasta} > ${prefix}.merged.fasta
+    # `awk 1` (rather than plain `cat`) re-emits every line with a trailing
+    # newline, so a missing final newline on \$purged_fasta can't silently
+    # concatenate its last sequence line onto \$organelle_fasta's first
+    # header.
+    awk 1 ${purged_fasta} ${organelle_fasta} > ${prefix}.merged.fasta
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

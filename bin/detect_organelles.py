@@ -146,6 +146,13 @@ def main():
 
     baseline = weighted_median([(c["mean_depth"], c["length"]) for c in contigs.values()])
     threshold = args.coverage_multiplier * baseline
+    # A zero baseline (e.g. reads recruit to none of the contigs' majority
+    # span -- plausible here since this runs on the RAW, unfiltered assembly,
+    # before BTK_FILTER has removed anything the reads don't map to) makes
+    # threshold 0 too, so `mean_depth >= threshold` would be true for every
+    # contig and the whole assembly would be misclassified as organelle.
+    # Treat "no usable coverage signal" as "isolate nothing" instead.
+    no_coverage_signal = baseline <= 0
 
     rows = []
     organelle_ids = []
@@ -155,7 +162,7 @@ def main():
     for contig_id in sorted(contigs):
         info = contigs[contig_id]
         length, mean_depth = info["length"], info["mean_depth"]
-        coverage_flag = mean_depth >= threshold
+        coverage_flag = False if no_coverage_signal else mean_depth >= threshold
         length_flag = True if args.max_length is None else length <= args.max_length
         isolated = coverage_flag and length_flag
         if coverage_flag:
@@ -193,6 +200,7 @@ def main():
         "baseline_coverage": baseline,
         "coverage_multiplier": args.coverage_multiplier,
         "threshold": threshold,
+        "no_coverage_signal": no_coverage_signal,
         "max_length": args.max_length,
         "reference_fasta_used": reference_used,
         "min_reference_coverage": args.min_reference_coverage if reference_used else None,
@@ -234,7 +242,14 @@ def main():
     with open(args.output_mqc_json, "w") as handle:
         json.dump(mqc, handle, indent=2)
 
-    if organelle_ids:
+    if no_coverage_signal:
+        caveat = (
+            f"Organelle isolation enabled for sample '{args.sample_id}' but the length-weighted "
+            "median contig depth was 0x (no usable coverage signal, e.g. reads did not map to a "
+            "majority of the assembly's span): no contigs were isolated rather than risk "
+            "misclassifying the whole assembly as organelle-like."
+        )
+    elif organelle_ids:
         caveat = (
             f"{len(organelle_ids)} organelle-like contig(s) isolated for sample '{args.sample_id}' "
             f"(total {total_isolated_span} bp, mean depth >= {threshold:.1f}x, "
