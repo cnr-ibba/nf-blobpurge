@@ -92,7 +92,7 @@ A `ch_caveats` channel of `[ meta, caveat_string ]` is mixed from any subworkflo
 
 ### Modules (`modules/local/`)
 
-All pipeline-specific logic is a local module (no nf-core remote modules besides `modules/nf-core/multiqc`). Each module directory has `main.nf` (+ `environment.yml` for conda). Notable ones:
+All pipeline-specific logic is a local module (the only vendored nf-core remote modules are `modules/nf-core/multiqc` and `modules/nf-core/busco/download`). Each module directory has `main.nf` (+ `environment.yml` for conda). Notable ones:
 
 - `btk_filter` — wraps `blobtools filter`; auto-detects `--taxrule` from the BlobDir's `meta.json` via `bin/detect_taxrule.py` when not given explicitly, and fails with a pointed error (naming the exact field/taxrule mismatch to check) rather than passing through `blobtools`' raw failure.
 - `blobpurge_report` — invokes `bin/generate_report.py`, the final verdict-producing step.
