@@ -243,6 +243,13 @@ def main():
         f'(relative diff {fmt_pct(span_check["relative_diff"])}, tolerance {fmt_pct(span_check["tolerance"])}). '
         f'{"OK" if span_check["pass"] else "FAILED"}</p>'
     )
+    if organelle_report is not None and organelle_report.get("n_isolated", 0):
+        span_check_html += (
+            '<p class="note">Organelle-like contigs are isolated and excluded from this accounting '
+            "entirely (see the Organelle contig isolation section below) before contamination "
+            'filtering runs -- "original"/"filtered" here refer to the nuclear-only assembly '
+            "BTK_FILTER actually ran on.</p>"
+        )
 
     if organelle_report is None:
         organelle_html = (
@@ -298,6 +305,7 @@ def main():
   .ok {{ color: #1a7f37; }}
   .warn {{ color: #9a6700; }}
   .fail {{ color: #cf222e; font-weight: bold; }}
+  .note {{ color: #57606a; font-style: italic; }}
   .verdict-box {{ border: 2px solid currentColor; border-radius: 8px; padding: 1rem 1.25rem; font-size: 1.1rem; margin: 1rem 0 2rem; }}
   .caveats {{ background: #fff8e6; border-left: 4px solid #9a6700; padding: .75rem 1rem; }}
   .chart {{ margin: .5rem 0; }}
