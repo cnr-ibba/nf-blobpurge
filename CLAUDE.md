@@ -60,7 +60,7 @@ There is a single top-level pipeline test, `tests/default.nf.test`, which runs `
 nf-core pipelines lint .
 ```
 
-Config obeys `.nf-core.yml` (`repository_type: pipeline`, `is_nfcore: false`, `org: cnr-ibba`). Pre-commit config (`.pre-commit-config.yaml`) and Prettier (`.prettierrc.yml`) are also present.
+Config obeys `.nf-core.yml` (`repository_type: pipeline`, `is_nfcore: false`, `org: cnr-ibba`). Pre-commit config (`.pre-commit-config.yaml`) and Prettier (`.prettierrc.yml`) are also present; CI enforces them via [`prek`](https://github.com/j178/prek) (`.github/workflows/linting.yml`, job `pre-commit`). Run `prek install` once per clone to enable the same checks as a local git hook, so formatting issues are caught (and often auto-fixed) at commit time instead of failing CI after a push — see `docs/CONTRIBUTING.md`.
 
 ### Update the parameter schema
 

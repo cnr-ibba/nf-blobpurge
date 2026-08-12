@@ -20,6 +20,7 @@ This page describes the recommended nf-core way to contribute to both cnr-ibba/n
 To contribute code to any nf-core pipeline:
 
 - [ ] Ensure you have Nextflow, nf-core tools, and nf-test installed. See the [nf-core/tools repository](https://github.com/nf-core/tools) for instructions.
+- [ ] Install the local pre-commit hooks with `prek install` (see [Local pre-commit hooks](#local-pre-commit-hooks)) so formatting/lint issues are caught before you commit, not after CI fails.
 - [ ] Check whether a GitHub [issue](https://github.com/cnr-ibba/nf-blobpurge/issues) about your idea already exists. If an issue does not exist, create one so that others are aware you are working on it.
 - [ ] [Fork](https://help.github.com/en/github/getting-started-with-github/fork-a-repo) the [cnr-ibba/nf-blobpurge repository](https://github.com/cnr-ibba/nf-blobpurge) to your GitHub account.
 - [ ] Create a branch on your forked repository and make your changes following [pipeline conventions](#pipeline-contribution-conventions) (if applicable).
@@ -161,5 +162,25 @@ nf-core pipelines bump-version --nextflow . <min_nf_version>
 If you update images or graphics, follow the nf-core [style guidelines](https://nf-co.re/docs/community/brand/workflow-schematics).
 
 ## Pipeline specific contribution guidelines
+
+### Local pre-commit hooks
+
+This repository ships a `.pre-commit-config.yaml` (Prettier, trailing-whitespace,
+end-of-file-fixer, and `nextflow-lint`) that CI enforces on every PR via
+[`prek`](https://github.com/j178/prek) (`.github/workflows/linting.yml`, job
+`pre-commit`). Install the same checks as a local git hook once per clone, so
+issues are caught -- and in most cases auto-fixed -- at `git commit` time
+instead of surfacing as a CI failure after you've already pushed:
+
+```bash
+prek install
+```
+
+`prek` is a fast, Rust-based drop-in replacement for the Python
+[`pre-commit`](https://pre-commit.com/) tool; both read the same
+`.pre-commit-config.yaml`, so `pre-commit install` works identically if you
+already have that installed instead. If a hook modifies files (e.g. Prettier
+reformatting), the commit is blocked and the fix is applied to your working
+tree -- `git add` the changed files and commit again.
 
 <!-- TODO nf-core: Add any pipeline specific contribution guidelines here, such as coding styles, procedures, checklists etc. -->
