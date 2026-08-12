@@ -89,7 +89,7 @@
                 "busco_lineages_path": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Optional path to a local, pre-downloaded BUSCO lineages/datasets directory. If not given, BUSCO downloads lineage data on demand.",
+                    "description": "Optional path to a local, pre-downloaded BUSCO lineages/datasets directory. If not given, each requested lineage is downloaded automatically once and reused across every assembly stage/chunk.",
                     "fa_icon": "fas fa-folder-open"
                 },
                 "busco_min_contig_length": {

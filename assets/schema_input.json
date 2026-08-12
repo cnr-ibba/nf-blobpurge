@@ -31,28 +31,9 @@
                 "format": "file-path",
                 "exists": true,
                 "pattern": "^\\S+\\.cram$",
-                "errorMessage": "reads_cram, if given, must be an existing .cram file of the short reads already aligned to 'assembly' (the same CRAM used by the upstream blobtoolkit run)."
-            },
-            "reads_r1": {
-                "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
-                "errorMessage": "reads_r1, if given, must be an existing gzipped FASTQ file."
-            },
-            "reads_r2": {
-                "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
-                "errorMessage": "reads_r2, if given, must be an existing gzipped FASTQ file."
+                "errorMessage": "reads_cram must be an existing .cram file of the short reads already aligned to 'assembly' (the same CRAM used by the upstream blobtoolkit run)."
             }
         },
-        "required": ["sample_id", "assembly", "blobdir"],
-        "anyOf": [
-            { "required": ["reads_cram"] },
-            { "required": ["reads_r1", "reads_r2"] }
-        ],
-        "errorMessage": "Each row must provide either 'reads_cram', or both 'reads_r1' and 'reads_r2', to compute read coverage for purge_dups/purge_haplotigs."
+        "required": ["sample_id", "assembly", "blobdir", "reads_cram"]
     }
 }

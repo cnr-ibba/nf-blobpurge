@@ -1,6 +1,6 @@
 {
     "@context": [
-        "https://w3id.org/ro/crate/1.2/context",
+        "https://w3id.org/ro/crate/1.1/context",
         {
             "GithubService": "https://w3id.org/ro/terms/test#GithubService",
             "JenkinsService": "https://w3id.org/ro/terms/test#JenkinsService",
@@ -22,14 +22,17 @@
             "@id": "./",
             "@type": "Dataset",
             "creativeWorkStatus": "InProgress",
-            "datePublished": "2026-07-15T13:47:42+00:00",
-            "description": "# cnr-ibba/nf-blobpurge\n\n[![Open in GitHub Codespaces](https://img.shields.io/badge/Open_In_GitHub_Codespaces-black?labelColor=grey&logo=github)](https://github.com/codespaces/new/cnr-ibba/nf-blobpurge)\n[![GitHub Actions CI Status](https://github.com/cnr-ibba/nf-blobpurge/actions/workflows/nf-test.yml/badge.svg)](https://github.com/cnr-ibba/nf-blobpurge/actions/workflows/nf-test.yml)\n[![GitHub Actions Linting Status](https://github.com/cnr-ibba/nf-blobpurge/actions/workflows/linting.yml/badge.svg)](https://github.com/cnr-ibba/nf-blobpurge/actions/workflows/linting.yml)[![Cite with Zenodo](http://img.shields.io/badge/DOI-10.5281/zenodo.XXXXXXX-1073c8?labelColor=000000)](https://doi.org/10.5281/zenodo.XXXXXXX)\n[![nf-test](https://img.shields.io/badge/unit_tests-nf--test-337ab7.svg)](https://www.nf-test.com)\n\n[![Nextflow](https://img.shields.io/badge/version-%E2%89%A525.10.4-green?style=flat&logo=nextflow&logoColor=white&color=%230DC09D&link=https%3A%2F%2Fnextflow.io)](https://www.nextflow.io/)\n[![nf-core template version](https://img.shields.io/badge/nf--core_template-4.0.2-green?style=flat&logo=nfcore&logoColor=white&color=%2324B064&link=https%3A%2F%2Fnf-co.re)](https://github.com/nf-core/tools/releases/tag/4.0.2)\n[![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)\n[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)\n[![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)\n[![Launch on Seqera Platform](https://img.shields.io/badge/Launch%20%F0%9F%9A%80-Seqera%20Platform-%234256e7)](https://cloud.seqera.io/launch?pipeline=https://github.com/cnr-ibba/nf-blobpurge)\n\n## Introduction\n\n**cnr-ibba/nf-blobpurge** is a bioinformatics pipeline for de novo short-read genome assemblies (e.g. algae) that have already been classified with [sanger-tol/blobtoolkit](https://github.com/sanger-tol/blobtoolkit). Starting from an existing assembly + BlobDir pair (it never regenerates the BlobDir), it removes contaminant contigs, purges uncollapsed heterozygous haplotigs with `purge_dups` (cross-checked independently with `purge_haplotigs`), runs comparative BUSCO across every assembly stage, and produces a single per-sample HTML report with an explicit verdict on whether the size/duplication surplus is explained by heterozygous haplotigs.\n\nNothing about a specific organism, taxon, or BUSCO lineage is hardcoded: the taxa to exclude and the BUSCO lineage(s) to run are mandatory parameters with no default.\n\n1. Remove contaminant contigs from an existing BlobDir, with a programmatic assembly-span conservation check (`BTK_FILTER`)\n2. Compute read coverage for purging: subset an existing reads CRAM, or map FASTQ reads fresh with `bwa-mem2` (`READ_COVERAGE`)\n3. Purge uncollapsed heterozygous haplotigs (`purge_dups`), cross-checked independently and in parallel with `purge_haplotigs`\n4. Run comparative BUSCO (never `--auto-lineage`) across the raw, filtered and purged assemblies\n5. Generate a per-sample HTML report tying span, BUSCO duplication, the GenomeScope2 comparison (if provided) and the purge_dups/purge_haplotigs cross-check together into an explicit verdict\n6. Present QC and software versions for the whole run ([`MultiQC`](http://multiqc.info/))\n\n## Usage\n\n> [!NOTE]\n> If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.\n\nFirst, prepare a samplesheet with your input data that looks as follows (see [docs/usage.md](docs/usage.md) for the full column reference):\n\n`samplesheet.csv`:\n\n```csv\nsample_id,assembly,blobdir,reads_cram,reads_r1,reads_r2\nsample1,/data/sample1.assembly.fasta,/data/sample1_blobdir,/data/sample1.reads.cram,,\n```\n\nEach row represents one already-assembled, already-blobtoolkit-classified sample: its assembly FASTA, its BlobDir, and either a reads CRAM or a pair of FASTQ files for coverage.\n\nNow, you can run the pipeline using:\n\n```bash\nnextflow run cnr-ibba/nf-blobpurge \\\n   -profile <docker/singularity/.../institute> \\\n   --input samplesheet.csv \\\n   --outdir <OUTDIR> \\\n   --exclude_taxa \"Pseudomonadota,Bacteroidota,Actinomycetota\" \\\n   --busco_lineages \"chlorophyta_odb12,viridiplantae_odb12\"\n```\n\n`--exclude_taxa` and `--busco_lineages` are mandatory and have no default -- the pipeline fails immediately with an explicit error if either is missing.\n\n> [!WARNING]\n> Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).\n\n## Credits\n\ncnr-ibba/nf-blobpurge was originally written by Paolo Cozzi.\n\nWe thank the following people for their extensive assistance in the development of this pipeline:\n\n<!-- TODO nf-core: If applicable, make list of people who have also contributed -->\n\n## Contributions and Support\n\nIf you would like to contribute to this pipeline, please see the [contributing guidelines](docs/CONTRIBUTING.md).\n\n## Citations\n\n<!-- TODO nf-core: Add citation for pipeline after first release. Uncomment lines below and update Zenodo doi and badge at the top of this file. -->\n<!-- If you use cnr-ibba/nf-blobpurge for your analysis, please cite it using the following doi: [10.5281/zenodo.XXXXXX](https://doi.org/10.5281/zenodo.XXXXXX) -->\n\n<!-- TODO nf-core: Add bibliography of tools and data used in your pipeline -->\n\nAn extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.\n\nThis pipeline uses code and infrastructure developed and maintained by the [nf-core](https://nf-co.re) community, reused here under the [MIT license](https://github.com/nf-core/tools/blob/main/LICENSE).\n\n> **The nf-core framework for community-curated bioinformatics pipelines.**\n>\n> Philip Ewels, Alexander Peltzer, Sven Fillinger, Harshil Patel, Johannes Alneberg, Andreas Wilm, Maxime Ulysse Garcia, Paolo Di Tommaso & Sven Nahnsen.\n>\n> _Nat Biotechnol._ 2020 Feb 13. doi: [10.1038/s41587-020-0439-x](https://dx.doi.org/10.1038/s41587-020-0439-x).\n",
+            "datePublished": "2026-08-12T12:49:59+00:00",
+            "description": "# cnr-ibba/nf-blobpurge\n\n[![Open in GitHub Codespaces](https://img.shields.io/badge/Open_In_GitHub_Codespaces-black?labelColor=grey&logo=github)](https://github.com/codespaces/new/cnr-ibba/nf-blobpurge)\n[![GitHub Actions CI Status](https://github.com/cnr-ibba/nf-blobpurge/actions/workflows/nf-test.yml/badge.svg)](https://github.com/cnr-ibba/nf-blobpurge/actions/workflows/nf-test.yml)\n[![GitHub Actions Linting Status](https://github.com/cnr-ibba/nf-blobpurge/actions/workflows/linting.yml/badge.svg)](https://github.com/cnr-ibba/nf-blobpurge/actions/workflows/linting.yml)[![Cite with Zenodo](http://img.shields.io/badge/DOI-10.5281/zenodo.XXXXXXX-1073c8?labelColor=000000)](https://doi.org/10.5281/zenodo.XXXXXXX)\n[![nf-test](https://img.shields.io/badge/unit_tests-nf--test-337ab7.svg)](https://www.nf-test.com)\n\n[![Nextflow](https://img.shields.io/badge/version-%E2%89%A525.10.4-green?style=flat&logo=nextflow&logoColor=white&color=%230DC09D&link=https%3A%2F%2Fnextflow.io)](https://www.nextflow.io/)\n[![nf-core template version](https://img.shields.io/badge/nf--core_template-4.0.2-green?style=flat&logo=nfcore&logoColor=white&color=%2324B064&link=https%3A%2F%2Fnf-co.re)](https://github.com/nf-core/tools/releases/tag/4.0.2)\n[![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)\n[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)\n[![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)\n[![Launch on Seqera Platform](https://img.shields.io/badge/Launch%20%F0%9F%9A%80-Seqera%20Platform-%234256e7)](https://cloud.seqera.io/launch?pipeline=https://github.com/cnr-ibba/nf-blobpurge)\n\n## Introduction\n\n**cnr-ibba/nf-blobpurge** is a bioinformatics pipeline for de novo short-read genome assemblies (e.g. algae) that have already been classified with [sanger-tol/blobtoolkit](https://github.com/sanger-tol/blobtoolkit). Starting from an existing assembly + BlobDir pair (it never regenerates the BlobDir), it removes contaminant contigs, purges uncollapsed heterozygous haplotigs with `purge_dups` (cross-checked independently with `purge_haplotigs`), runs comparative BUSCO across every assembly stage, and produces a single per-sample HTML report with an explicit verdict on whether the size/duplication surplus is explained by heterozygous haplotigs.\n\nNothing about a specific organism, taxon, or BUSCO lineage is hardcoded: the taxa to exclude and the BUSCO lineage(s) to run are mandatory parameters with no default.\n\n1. Remove contaminant contigs from an existing BlobDir, with a programmatic assembly-span conservation check (`BTK_FILTER`)\n2. Compute read coverage for purging: subset the existing reads CRAM produced upstream by blobtoolkit (`READ_COVERAGE`)\n3. Purge uncollapsed heterozygous haplotigs (`purge_dups`), cross-checked independently and in parallel with `purge_haplotigs`\n4. Run comparative BUSCO (never `--auto-lineage`) across the raw, filtered and purged assemblies\n5. Generate a per-sample HTML report tying span, BUSCO duplication, the GenomeScope2 comparison (if provided) and the purge_dups/purge_haplotigs cross-check together into an explicit verdict\n6. Present QC and software versions for the whole run ([`MultiQC`](http://multiqc.info/))\n\n## Usage\n\n> [!NOTE]\n> If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.\n\nFirst, prepare a samplesheet with your input data that looks as follows (see [docs/usage.md](docs/usage.md) for the full column reference):\n\n`samplesheet.csv`:\n\n```csv\nsample_id,assembly,blobdir,reads_cram\nsample1,/data/sample1.assembly.fasta,/data/sample1_blobdir,/data/sample1.reads.cram\n```\n\nEach row represents one already-assembled, already-blobtoolkit-classified sample: its assembly FASTA, its BlobDir, and the reads CRAM blobtoolkit already produced (aligned to the raw assembly) for coverage.\n\nNow, you can run the pipeline using:\n\n```bash\nnextflow run cnr-ibba/nf-blobpurge \\\n   -profile <docker/singularity/.../institute> \\\n   --input samplesheet.csv \\\n   --outdir <OUTDIR> \\\n   --exclude_taxa \"Pseudomonadota,Bacteroidota,Actinomycetota\" \\\n   --busco_lineages \"chlorophyta_odb12,viridiplantae_odb12\"\n```\n\n`--exclude_taxa` and `--busco_lineages` are mandatory and have no default -- the pipeline fails immediately with an explicit error if either is missing.\n\n> [!WARNING]\n> Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).\n\n## Credits\n\ncnr-ibba/nf-blobpurge was originally written by Paolo Cozzi.\n\nWe thank the following people for their extensive assistance in the development of this pipeline:\n\n<!-- TODO nf-core: If applicable, make list of people who have also contributed -->\n\n## Contributions and Support\n\nIf you would like to contribute to this pipeline, please see the [contributing guidelines](docs/CONTRIBUTING.md).\n\n## Citations\n\n<!-- TODO nf-core: Add citation for pipeline after first release. Uncomment lines below and update Zenodo doi and badge at the top of this file. -->\n<!-- If you use cnr-ibba/nf-blobpurge for your analysis, please cite it using the following doi: [10.5281/zenodo.XXXXXX](https://doi.org/10.5281/zenodo.XXXXXX) -->\n\n<!-- TODO nf-core: Add bibliography of tools and data used in your pipeline -->\n\nAn extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.\n\nThis pipeline uses code and infrastructure developed and maintained by the [nf-core](https://nf-co.re) community, reused here under the [MIT license](https://github.com/nf-core/tools/blob/main/LICENSE).\n\n> **The nf-core framework for community-curated bioinformatics pipelines.**\n>\n> Philip Ewels, Alexander Peltzer, Sven Fillinger, Harshil Patel, Johannes Alneberg, Andreas Wilm, Maxime Ulysse Garcia, Paolo Di Tommaso & Sven Nahnsen.\n>\n> _Nat Biotechnol._ 2020 Feb 13. doi: [10.1038/s41587-020-0439-x](https://dx.doi.org/10.1038/s41587-020-0439-x).\n",
             "hasPart": [
                 {
                     "@id": "main.nf"
                 },
                 {
                     "@id": "assets/"
+                },
+                {
+                    "@id": "bin/"
                 },
                 {
                     "@id": "conf/"
@@ -39,6 +42,9 @@
                 },
                 {
                     "@id": "modules/"
+                },
+                {
+                    "@id": "modules/local/"
                 },
                 {
                     "@id": "modules/nf-core/"
@@ -93,7 +99,7 @@
             },
             "mentions": [
                 {
-                    "@id": "#7c565322-604e-4d23-88d7-b1f70ef848da"
+                    "@id": "#61e34d95-bd76-425c-93d1-7ce4d60a7515"
                 }
             ],
             "name": "cnr-ibba/nf-blobpurge"
@@ -106,7 +112,7 @@
             },
             "conformsTo": [
                 {
-                    "@id": "https://w3id.org/ro/crate/1.2"
+                    "@id": "https://w3id.org/ro/crate/1.1"
                 },
                 {
                     "@id": "https://w3id.org/workflowhub/workflow-ro-crate/1.0"
@@ -120,13 +126,13 @@
                 "SoftwareSourceCode",
                 "ComputationalWorkflow"
             ],
-            "contributor": [
+            "author": [
                 {
                     "@id": "https://orcid.org/0000-0003-0388-6874"
                 }
             ],
             "dateCreated": "",
-            "dateModified": "2026-07-15T15:47:42Z",
+            "dateModified": "2026-08-12T14:49:59Z",
             "dct:conformsTo": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE/",
             "keywords": [
                 "nf-core",
@@ -134,6 +140,11 @@
             ],
             "license": [
                 "MIT"
+            ],
+            "maintainer": [
+                {
+                    "@id": "https://orcid.org/0000-0003-0388-6874"
+                }
             ],
             "name": [
                 "cnr-ibba/nf-blobpurge"
@@ -165,11 +176,11 @@
             "version": "!>=25.10.4"
         },
         {
-            "@id": "#7c565322-604e-4d23-88d7-b1f70ef848da",
+            "@id": "#61e34d95-bd76-425c-93d1-7ce4d60a7515",
             "@type": "TestSuite",
             "instance": [
                 {
-                    "@id": "#f7403549-cfac-417b-939f-6dcb65b7212e"
+                    "@id": "#7f5a8220-bc12-494f-a0f4-ff076114851f"
                 }
             ],
             "mainEntity": {
@@ -178,7 +189,7 @@
             "name": "Test suite for cnr-ibba/nf-blobpurge"
         },
         {
-            "@id": "#f7403549-cfac-417b-939f-6dcb65b7212e",
+            "@id": "#7f5a8220-bc12-494f-a0f4-ff076114851f",
             "@type": "TestInstance",
             "name": "GitHub Actions workflow for testing cnr-ibba/nf-blobpurge",
             "resource": "repos/cnr-ibba/nf-blobpurge/actions/workflows/nf-test.yml",
@@ -201,6 +212,11 @@
             "description": "Additional files"
         },
         {
+            "@id": "bin/",
+            "@type": "Dataset",
+            "description": "Scripts that must be callable from a pipeline process"
+        },
+        {
             "@id": "conf/",
             "@type": "Dataset",
             "description": "Configuration files"
@@ -214,6 +230,11 @@
             "@id": "modules/",
             "@type": "Dataset",
             "description": "Modules used by the pipeline"
+        },
+        {
+            "@id": "modules/local/",
+            "@type": "Dataset",
+            "description": "Pipeline-specific modules"
         },
         {
             "@id": "modules/nf-core/",
@@ -299,7 +320,10 @@
         {
             "@id": "https://orcid.org/0000-0003-0388-6874",
             "@type": "Person",
-            "name": "Paolo Cozzi"
+            "affiliation": "CNR-IBBA",
+            "email": "paoloalessandro.cozzi@cnr.it",
+            "name": "Paolo Cozzi",
+            "url": "https://github.com/bunop"
         }
     ]
 }

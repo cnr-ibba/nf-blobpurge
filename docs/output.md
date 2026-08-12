@@ -9,8 +9,7 @@ This document describes the output produced by the pipeline for each sample in t
 The pipeline processes each sample through the following stages:
 
 - [BTK_FILTER](#btk_filter) - contamination removal from an existing BlobDir, with a programmatic span-conservation check
-- [Read coverage](#read-coverage) - CRAM subsetting or bwa-mem2 mapping, feeding purge_dups' `ngscstat`
-- [Organelle isolation](#organelle-isolation) - optional coverage-based isolation of mitochondrial/plastid contigs before purging
+- [Read coverage](#read-coverage) - CRAM subsetting, feeding purge_dups' `ngscstat`
 - [purge_dups](#purge_dups) - haplotig purging
 - [purge_haplotigs](#purge_haplotigs) - independent cross-check of purge_dups (optional, on by default)
 - [Assembly stats](#assembly-stats) - span/N50/contig-count at every stage, machine-generated
@@ -40,31 +39,11 @@ Runs `blobtools filter` against the existing BlobDir named in the samplesheet, u
 <details markdown="1">
 <summary>Output files</summary>
 
-- `samtools/` or `bwamem2/`: sorted/indexed BAM used for coverage (CRAM subset, or fresh bwa-mem2 mapping onto the filtered assembly).
-- `samtools/<sample_id>.namesorted.bam`: the same BAM, name-sorted, feeding `ngscstat` below.
-- `samtools/<sample_id>.nuclear.namesorted.bam`, `<sample_id>.organelle.namesorted.bam`: only present with `--run_organelle_isolation`; the nuclear-only and organelle-only BAM subsets, name-sorted, feeding the organelle-free `ngscstat` re-derivation and organelle read export (see [Organelle isolation](#organelle-isolation)).
+- `cram/<sample_id>.coverage.sorted.bam(.bai)`: the reads CRAM subset onto BTK_FILTER-retained contigs, sorted and indexed.
+- `samtools/<sample_id>.bam`: the same alignment, name-sorted for `ngscstat`; `<sample_id>.flagstat`/`.idxstats`/`.stats`: QC stats for MultiQC.
 - `purgedups/<sample_id>.ngscstat.stat`, `<sample_id>.ngscstat.base.cov`: purge_dups Illumina coverage stats (`ngscstat`).
 
 </details>
-
-### Organelle isolation
-
-<details markdown="1">
-<summary>Output files</summary>
-
-- `organelle/`
-  - `<sample_id>.organelle_report.json`: classification report -- baseline/threshold coverage used, and, per contig, mean depth, coverage ratio, length, and (if `--organelle_reference_fasta` was given) reference-match fraction.
-  - `<sample_id>.organelle_report.mqc.json`: the same summary, reformatted as a MultiQC custom-content table.
-  - `<sample_id>.organelle.fasta` / `<sample_id>.nuclear.fasta`: the filtered assembly split by classification.
-  - `<sample_id>.organelle_ids.txt` / `<sample_id>.nuclear_ids.txt`: the corresponding contig ID lists.
-  - `<sample_id>.organelle_ref.paf`: minimap2 alignment of the filtered assembly against `--organelle_reference_fasta`, if given (empty otherwise).
-  - `<sample_id>.organelle_R1.fastq.gz` / `<sample_id>.organelle_R2.fastq.gz`: paired-end reads mapping to the isolated organelle contigs, for use with external organelle-assembly tools (this pipeline does not assemble organelles itself).
-  - `<sample_id>.purge_dups.merged.fasta` / `<sample_id>.purge_haplotigs.merged.fasta`: the isolated organelle contigs re-merged back into each purge stage's assembly.
-- `nuclear/`: the coordinate-sorted/indexed BAM subset to nuclear-only contigs, used to re-derive an organelle-free `ngscstat` coverage pair (see [purge_dups](#purge_dups)) and fed to `purge_haplotigs`.
-
-</details>
-
-Only produced when `--run_organelle_isolation` is `true` (default `false`). Isolated contigs are not contamination and are not discarded: `purge_dups`/`purge_haplotigs` run on the nuclear-only assembly so their coverage-cutoff estimation isn't distorted by the organelle's much higher copy number, and the isolated contigs are re-merged into the final assembly at every stage afterwards.
 
 ### purge_dups
 
@@ -131,7 +110,7 @@ Every requested `--busco_lineages` entry is run explicitly (never `--auto-lineag
 <details markdown="1">
 <summary>Output files</summary>
 
-- `analyses/<sample_id>_blobpurge.html`: the final, self-contained per-sample report -- span per stage, the BTK_FILTER span check, organelle contig isolation (or an explicit "not enabled" notice), the GenomeScope2 comparison (or an explicit "not provided" notice), the BUSCO duplication trend per lineage, the purge_dups vs purge_haplotigs comparison (flagged if they disagree beyond `--purge_disagreement_threshold`), the collected caveats (ngscstat/Illumina path, purge_haplotigs on short-read coverage), and an explicit yes/partial/no verdict on whether uncollapsed heterozygous haplotigs explain the assembly's size/duplication surplus.
+- `analyses/<sample_id>_blobpurge.html`: the final, self-contained per-sample report -- span per stage, the BTK_FILTER span check, the GenomeScope2 comparison (or an explicit "not provided" notice), the BUSCO duplication trend per lineage, the purge_dups vs purge_haplotigs comparison (flagged if they disagree beyond `--purge_disagreement_threshold`), the collected caveats (ngscstat/Illumina path, purge_haplotigs on short-read coverage), and an explicit yes/partial/no verdict on whether uncollapsed heterozygous haplotigs explain the assembly's size/duplication surplus.
 
 </details>
 

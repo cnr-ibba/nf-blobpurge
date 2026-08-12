@@ -2,47 +2,44 @@
 """Generate the tiny synthetic dataset used by -profile test.
 
 Produces:
-  - assembly.fasta: 7 contigs -- a heterozygous duplicate pair (ctg1/ctg2,
+  - assembly.fasta: 6 contigs -- a heterozygous duplicate pair (ctg1/ctg2,
     8% divergent, so BTK_FILTER->purge_dups has something real to purge),
-    two unrelated unique host contigs, two "contaminant" contigs, and one
-    organelle-like contig (ctg7_organelle) at extreme coverage.
+    two unrelated unique host contigs, and two "contaminant" contigs.
   - blobdir/: a minimal, hand-built BlobDir (meta.json + identifiers/length/
     buscoregions_phylum field JSON) matching the schema BTK_FILTER expects.
-    ctg7_organelle is deliberately labelled with the same "Chlorophyta"
-    category as the other host contigs -- BTK_FILTER must NOT remove it as
-    contamination; only --run_organelle_isolation's coverage-based check
-    should flag it, which is exactly the scenario that feature exists for.
-  - organelle_reference.fasta: a 2%-divergent copy of ctg7_organelle's own
-    sequence, standing in for a real mitochondrial/plastid reference, to
-    exercise --organelle_reference_fasta's minimap2 corroboration path.
-  - reads_R1.fastq.gz / reads_R2.fastq.gz: paired-end reads sampled
-    independently from ctg1 and ctg2 (each at half the depth used for the
-    unique host contigs) -- reflecting the real biology of an uncollapsed
-    heterozygous locus, where each assembled copy only receives reads from
-    the haplotype it truly represents. At 8% divergence each read maps
-    confidently (MAPQ > 30) to its true contig of origin -- required for
-    purge_dups' ngscstat, which discards low-MAPQ reads -- while remaining
-    well within minimap2 asm5's detection range for the self-alignment step.
-    An earlier design tried near-zero divergence to force bwa-mem2
-    multi-mapping ambiguity, but that MAPQ~0 signal is exactly what
-    ngscstat's default -q 30 filter discards, silently zeroing out the
-    coverage it was meant to produce. No reads are simulated for the
-    contaminant contigs. ctg7_organelle is sampled at 8x the normal host
-    depth (well above the default --organelle_coverage_multiplier of 5x),
-    matching the high copy number of a real organelle genome.
+  - reads.cram(.crai): paired-end alignments sampled independently from ctg1
+    and ctg2 (each at half the depth used for the unique host contigs) --
+    reflecting the real biology of an uncollapsed heterozygous locus, where
+    each assembled copy only receives reads from the haplotype it truly
+    represents. The pipeline only accepts a pre-aligned reads CRAM (the
+    sanger-tol/blobtoolkit precondition -- see read_coverage.nf), so this
+    fixture hand-builds the alignment directly instead of simulating FASTQ
+    and running a real aligner: each pair's true contig-of-origin and
+    fragment position are already known from sampling, so the ground-truth
+    SAM record is a trivial full-length match (no aligner-introduced
+    ambiguity to reason about, unlike the old bwa-mem2-based design this
+    replaced). Sequencing errors are still injected via mutate() to keep
+    per-base identity non-trivial for downstream coverage/GC stats. No reads
+    are simulated for the contaminant contigs.
   - samplesheet.csv
 
 Everything here is synthetic and deterministic (fixed RNG seed) -- this is a
 plumbing fixture for -profile test, not a biologically meaningful assembly.
+Building the CRAM shells out to `samtools` via Docker (not required to be on
+PATH), using the same image CRAM_TO_BAM runs in.
 """
 import gzip
 import json
+import os
 import random
+import subprocess
+import tempfile
 from pathlib import Path
 
 random.seed(42)
 OUT = Path(__file__).parent
 BASES = "ACGT"
+SAMTOOLS_IMAGE = "quay.io/biocontainers/samtools:1.24--h9dcdb79_0"
 
 
 def random_seq(n):
@@ -93,7 +90,15 @@ def write_fasta(path, records):
                 handle.write(seq[i:i + 70] + "\n")
 
 
-def sample_reads(seq, contig_id, depth, read_len=100, insert=300, error_rate=0.005):
+def sample_reads(seq, ref_id, name_prefix, depth, read_len=100, insert=300, error_rate=0.005):
+    """Sample paired-end fragments and return their ground-truth alignment:
+    each pair already knows its true reference contig and 0-based leftmost
+    mapping position for R1/R2, since it was sampled directly from `seq`
+    (only substitution errors are injected -- no indels -- so every read's
+    true CIGAR is a trivial full-length match). Both SEQ fields are kept in
+    reference/forward-strand orientation (SAM convention for a read mapped
+    to the reverse strand), not sequencer-readout orientation.
+    """
     n_pairs = max(1, (len(seq) * depth) // (2 * read_len))
     pairs = []
     for i in range(n_pairs):
@@ -104,19 +109,69 @@ def sample_reads(seq, contig_id, depth, read_len=100, insert=300, error_rate=0.0
         frag = seq[start:start + insert]
         if len(frag) < read_len:
             frag = (frag + seq)[:read_len * 2]
-        r1 = frag[:read_len]
-        r2 = revcomp(frag[-read_len:])
-        r1 = mutate(r1, error_rate)
-        r2 = mutate(r2, error_rate)
-        pairs.append((f"{contig_id}_{i}", r1, r2))
+        pairs.append({
+            "name": f"{name_prefix}_{i}",
+            "ref": ref_id,
+            "r1_pos": start,
+            "r1_seq": mutate(frag[:read_len], error_rate),
+            "r2_pos": start + len(frag) - read_len,
+            "r2_seq": mutate(frag[-read_len:], error_rate),
+        })
     return pairs
 
 
-def write_fastq(path, reads, read_index):
-    with gzip.open(path, "wt") as handle:
-        for name, seq in reads:
-            qual = "I" * len(seq)
-            handle.write(f"@{name}/{read_index}\n{seq}\n+\n{qual}\n")
+def write_cram(path, pairs, ref_lengths, read_len=100):
+    """Hand-build a SAM (header + one properly-paired record pair per
+    fragment, MAPQ 60, full-length M CIGAR -- see sample_reads) and convert
+    it to a coordinate-sorted, indexed CRAM against ref_lengths' contig
+    order/lengths via a one-off samtools container. This mirrors what
+    sanger-tol/blobtoolkit's own upstream alignment step produces: a reads
+    CRAM aligned to the *raw*, unfiltered assembly.
+    """
+    lines = ["@HD\tVN:1.6\tSO:unsorted"]
+    for ref_id, length in ref_lengths.items():
+        lines.append(f"@SQ\tSN:{ref_id}\tLN:{length}")
+
+    qual = "I" * read_len
+    for pair in pairs:
+        r1_end = pair["r1_pos"] + read_len
+        r2_end = pair["r2_pos"] + read_len
+        tlen = max(r1_end, r2_end) - min(pair["r1_pos"], pair["r2_pos"])
+        lines.append("\t".join([
+            pair["name"], "99", pair["ref"], str(pair["r1_pos"] + 1), "60",
+            f"{read_len}M", "=", str(pair["r2_pos"] + 1), str(tlen),
+            pair["r1_seq"], qual,
+        ]))
+        lines.append("\t".join([
+            pair["name"], "147", pair["ref"], str(pair["r2_pos"] + 1), "60",
+            f"{read_len}M", "=", str(pair["r1_pos"] + 1), str(-tlen),
+            pair["r2_seq"], qual,
+        ]))
+
+    with tempfile.NamedTemporaryFile("w", suffix=".sam", dir=OUT, delete=False) as handle:
+        handle.write("\n".join(lines) + "\n")
+        sam_path = Path(handle.name)
+    try:
+        run_samtools([
+            "sh", "-c",
+            f"samtools sort -O cram --reference assembly.fasta "
+            f"-o {path.name} {sam_path.name} && samtools index {path.name}",
+        ])
+    finally:
+        sam_path.unlink(missing_ok=True)
+
+
+def run_samtools(cmd):
+    subprocess.run(
+        [
+            "docker", "run", "--rm",
+            "--user", f"{os.getuid()}:{os.getgid()}",
+            "-v", f"{OUT}:/data", "-w", "/data",
+            SAMTOOLS_IMAGE,
+            *cmd,
+        ],
+        check=True,
+    )
 
 
 def main():
@@ -131,12 +186,6 @@ def main():
     ctg6 = random_seq(8000)
     ctg4 = random_seq(1200)
     ctg5 = random_seq(1000)
-    # Small, but not tiny: enough sequence for minimap2 -xasm5 to align it
-    # confidently against organelle_reference.fasta below. Real organelle
-    # genomes are far larger (~15-20 kb); this fixture stays small purely to
-    # keep -profile test fast (its read depth is high enough that a
-    # realistic organelle size would dominate the fixture's runtime).
-    ctg7 = random_seq(1500)
 
     records = {
         "ctg1_host_A": ctg1,
@@ -145,26 +194,17 @@ def main():
         "ctg4_contam_bac1": ctg4,
         "ctg5_contam_bac2": ctg5,
         "ctg6_host_C": ctg6,
-        "ctg7_organelle": ctg7,
     }
     write_fasta(OUT / "assembly.fasta", records)
 
-    # 2%-divergent stand-in for a real mitochondrial/plastid reference,
-    # exercising --organelle_reference_fasta's minimap2 corroboration path.
-    write_fasta(OUT / "organelle_reference.fasta", {"mito_reference": mutate(ctg7, 0.02)})
-
     depth = 80
     all_pairs = []
-    all_pairs += sample_reads(ctg1, "h1", depth=depth // 2)
-    all_pairs += sample_reads(ctg2, "h2", depth=depth // 2)
-    all_pairs += sample_reads(ctg3, "ctg3", depth=depth)
-    all_pairs += sample_reads(ctg6, "ctg6", depth=depth)
-    all_pairs += sample_reads(ctg7, "ctg7", depth=depth * 8)
+    all_pairs += sample_reads(ctg1, "ctg1_host_A", "h1", depth=depth // 2)
+    all_pairs += sample_reads(ctg2, "ctg2_host_A_hap", "h2", depth=depth // 2)
+    all_pairs += sample_reads(ctg3, "ctg3_host_B", "ctg3", depth=depth)
+    all_pairs += sample_reads(ctg6, "ctg6_host_C", "ctg6", depth=depth)
 
-    r1_reads = [(name, r1) for name, r1, _r2 in all_pairs]
-    r2_reads = [(name, r2) for name, _r1, r2 in all_pairs]
-    write_fastq(OUT / "reads_R1.fastq.gz", r1_reads, 1)
-    write_fastq(OUT / "reads_R2.fastq.gz", r2_reads, 2)
+    write_cram(OUT / "reads.cram", all_pairs, {rid: len(seq) for rid, seq in records.items()})
 
     # --- BlobDir ---
     blobdir = OUT / "blobdir"
@@ -181,7 +221,6 @@ def main():
         "ctg2_host_A_hap": "Chlorophyta",
         "ctg3_host_B": "Chlorophyta",
         "ctg6_host_C": "Chlorophyta",
-        "ctg7_organelle": "Chlorophyta",
         "ctg4_contam_bac1": "Pseudomonadota",
         "ctg5_contam_bac2": "Bacteroidota",
     }

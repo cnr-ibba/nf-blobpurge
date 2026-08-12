@@ -25,3 +25,11 @@ busco/short_summary.*.txt
 # byte-for-byte across runs (observed to drift across two consecutive
 # docker runs with identical inputs/code).
 purgehaplotigs/*.bam.200.gencov
+
+# samtools sort's multi-threaded BGZF compression is not byte-deterministic
+# across different -@ thread counts (task.cpus), even though the aligned
+# reads it contains are unchanged -- observed to flip these two BAMs'
+# checksums whenever the test profile's CPU limit changes. Existence/path
+# stability is still covered by stable_path.
+cram/*.coverage.sorted.bam
+samtools/*.bam
