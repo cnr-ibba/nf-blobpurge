@@ -12,10 +12,12 @@ process MERGE_BUSCO_DOWNLOADS {
     // per requested lineage. Every one of them is offline-consumable on its
     // own (each is a complete busco_downloads/{information,lineages,
     // placement_files} tree scoped to that single lineage), so a plain
-    // no-clobber union is enough -- lineages/<lineage>_odbXX subdirs never
-    // collide across inputs, and any shared information/placement_files
-    // content is expected to be identical since every input comes from the
-    // same BUSCO version.
+    // union is enough -- lineages/<lineage>_odbXX subdirs never collide
+    // across inputs, and any shared information/placement_files content is
+    // expected to be identical since every input comes from the same BUSCO
+    // version, so overwriting it while merging is harmless. (Deliberately
+    // not using `cp -n`: BusyBox's `cp -n <symlinked-dir>/. dest/` silently
+    // copies nothing -- verified against this module's own container.)
 
     output:
     path "busco_downloads", emit: download_dir
@@ -28,12 +30,12 @@ process MERGE_BUSCO_DOWNLOADS {
     """
     mkdir -p busco_downloads
     for lineage_dl in lineage_dl_*; do
-        cp -rn "\${lineage_dl}"/. busco_downloads/
+        cp -r "\${lineage_dl}"/. busco_downloads/
     done
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        coreutils: \$(cp --version | head -n1 | sed 's/^cp (GNU coreutils) //')
+        python: \$(python3 --version | sed 's/Python //')
     END_VERSIONS
     """
 
