@@ -59,13 +59,19 @@ process BTK_FILTER {
 
     # blobtools filter writes the filtered FASTA next to the input (not
     # inside --output, which only holds the filtered BlobDir field JSONs),
-    # inserting ".<suffix>" right after the first "." of the input filename
-    # (e.g. "assembly.fasta" -> "assembly.filtered.fasta",
-    # "assembly.fasta.gz" -> "assembly.filtered.fasta.gz").
+    # inserting ".<suffix>" into the input filename -- but *where* depends on
+    # how many dots the input basename has (e.g. observed empirically:
+    # "assembly.fasta" -> "assembly.filtered.fasta", but
+    # "<sample>.nuclear.fasta" -> "<sample>.nuclear.filtered.fasta", i.e.
+    # right before the last extension, not after the first dot). Rather than
+    # hand-predict the exact name, discover whatever new FASTA file appeared
+    # next to the input -- it is the only one blobtools writes there.
     ASSEMBLY_BASENAME=\$(basename "${assembly}")
-    FILTERED_FASTA="\${ASSEMBLY_BASENAME%%.*}.filtered.\${ASSEMBLY_BASENAME#*.}"
-    if [ ! -s "\${FILTERED_FASTA}" ]; then
-        echo "ERROR: blobtools filter did not produce the expected filtered FASTA file '\${FILTERED_FASTA}'." >&2
+    FILTERED_FASTA_PATH=\$(find . -maxdepth 1 -type f \\( -name '*.fasta' -o -name '*.fasta.gz' -o -name '*.fa' -o -name '*.fa.gz' \\) ! -name "\${ASSEMBLY_BASENAME}" | head -n1)
+    FILTERED_FASTA=""
+    [ -n "\${FILTERED_FASTA_PATH}" ] && FILTERED_FASTA=\$(basename "\${FILTERED_FASTA_PATH}")
+    if [ -z "\${FILTERED_FASTA}" ] || [ ! -s "\${FILTERED_FASTA}" ]; then
+        echo "ERROR: blobtools filter did not produce a filtered FASTA file next to '\${ASSEMBLY_BASENAME}'." >&2
         exit 1
     fi
     if [[ "\${FILTERED_FASTA}" == *.gz ]]; then

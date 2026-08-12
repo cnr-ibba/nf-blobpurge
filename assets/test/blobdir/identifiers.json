@@ -2,5 +2,13 @@
     "id": "identifiers",
     "name": "identifiers",
     "type": "identifier",
-    "values": ["ctg1_host_A", "ctg2_host_A_hap", "ctg3_host_B", "ctg4_contam_bac1", "ctg5_contam_bac2", "ctg6_host_C"]
+    "values": [
+        "ctg1_host_A",
+        "ctg2_host_A_hap",
+        "ctg3_host_B",
+        "ctg4_contam_bac1",
+        "ctg5_contam_bac2",
+        "ctg6_host_C",
+        "ctg7_organelle"
+    ]
 }

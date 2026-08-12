@@ -2,9 +2,10 @@
 """Generate the tiny synthetic dataset used by -profile test.
 
 Produces:
-  - assembly.fasta: 6 contigs -- a heterozygous duplicate pair (ctg1/ctg2,
+  - assembly.fasta: 7 contigs -- a heterozygous duplicate pair (ctg1/ctg2,
     8% divergent, so BTK_FILTER->purge_dups has something real to purge),
-    two unrelated unique host contigs, and two "contaminant" contigs.
+    two unrelated unique host contigs, two "contaminant" contigs, and one
+    organelle-like contig at extreme coverage.
   - blobdir/: a minimal, hand-built BlobDir (meta.json + identifiers/length/
     buscoregions_phylum field JSON) matching the schema BTK_FILTER expects.
   - reads.cram(.crai): paired-end alignments sampled independently from ctg1
@@ -19,9 +20,23 @@ Produces:
     SAM record is a trivial full-length match (no aligner-introduced
     ambiguity to reason about, unlike the old bwa-mem2-based design this
     replaced). Sequencing errors are still injected via mutate() to keep
-    per-base identity non-trivial for downstream coverage/GC stats. No reads
-    are simulated for the contaminant contigs.
+    per-base identity non-trivial for downstream coverage/GC stats. The
+    organelle-like contig is sampled at 8x the normal host depth (its real
+    biological signature -- high copy number per cell). No reads are
+    simulated for the contaminant contigs.
+  - organelle_reference.fasta: a 2%-divergent copy of the organelle contig,
+    for --organelle_reference_fasta's minimap2 corroboration path.
   - samplesheet.csv
+
+The organelle-like contig is deliberately labelled with the same BlobDir
+taxon ("Pseudomonadota") as one of the "contaminant" contigs -- already in
+conf/test.config's --exclude_taxa -- rather than a legitimate host taxon.
+This is what actually exercises ORGANELLE_ISOLATE running *before*
+BTK_FILTER: with --run_organelle_isolation true, the organelle contig must
+survive into every downstream stage FASTA despite matching an excluded
+taxon (were it labelled as host taxon instead, BTK_FILTER would never have
+touched it anyway, and the fixture would not catch a regression back to the
+old, buggy post-filter ordering).
 
 Everything here is synthetic and deterministic (fixed RNG seed) -- this is a
 plumbing fixture for -profile test, not a biologically meaningful assembly.
@@ -186,6 +201,7 @@ def main():
     ctg6 = random_seq(8000)
     ctg4 = random_seq(1200)
     ctg5 = random_seq(1000)
+    ctg7 = random_seq(1500)
 
     records = {
         "ctg1_host_A": ctg1,
@@ -194,8 +210,10 @@ def main():
         "ctg4_contam_bac1": ctg4,
         "ctg5_contam_bac2": ctg5,
         "ctg6_host_C": ctg6,
+        "ctg7_organelle": ctg7,
     }
     write_fasta(OUT / "assembly.fasta", records)
+    write_fasta(OUT / "organelle_reference.fasta", {"organelle_ref": mutate(ctg7, 0.02)})
 
     depth = 80
     all_pairs = []
@@ -203,6 +221,7 @@ def main():
     all_pairs += sample_reads(ctg2, "ctg2_host_A_hap", "h2", depth=depth // 2)
     all_pairs += sample_reads(ctg3, "ctg3_host_B", "ctg3", depth=depth)
     all_pairs += sample_reads(ctg6, "ctg6_host_C", "ctg6", depth=depth)
+    all_pairs += sample_reads(ctg7, "ctg7_organelle", "ctg7", depth=depth * 8)
 
     write_cram(OUT / "reads.cram", all_pairs, {rid: len(seq) for rid, seq in records.items()})
 
@@ -223,6 +242,13 @@ def main():
         "ctg6_host_C": "Chlorophyta",
         "ctg4_contam_bac1": "Pseudomonadota",
         "ctg5_contam_bac2": "Bacteroidota",
+        # Deliberately the same excluded taxon as ctg4_contam_bac1 -- see the
+        # module docstring above. This is what makes the fixture a regression
+        # test for ORGANELLE_ISOLATE running before BTK_FILTER: mitochondria
+        # are frequently taxonomically misclassified as bacterial
+        # contamination in real blob plots, and this contig must survive
+        # BTK_FILTER's taxonomic filter regardless of this label.
+        "ctg7_organelle": "Pseudomonadota",
     }
     values = [keys.index(label_by_contig[i]) for i in identifiers]
 
