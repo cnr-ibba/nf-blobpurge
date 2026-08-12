@@ -8,6 +8,8 @@ include { COMPARE_BUSCO             } from '../../modules/local/compare_busco/ma
 include { FILTER_MIN_CONTIG_LENGTH  } from '../../modules/local/filter_min_contig_length/main'
 include { SPLIT_ASSEMBLY_FOR_BUSCO  } from '../../modules/local/split_assembly_for_busco/main'
 include { MERGE_BUSCO_CHUNKS        } from '../../modules/local/merge_busco_chunks/main'
+include { MERGE_BUSCO_DOWNLOADS     } from '../../modules/local/merge_busco_downloads/main'
+include { BUSCO_DOWNLOAD            } from '../../modules/nf-core/busco/download/main'
 
 workflow BUSCO_COMPARE {
 
@@ -20,9 +22,22 @@ workflow BUSCO_COMPARE {
 
     ch_lineages = Channel.fromList(params.busco_lineages.tokenize(','))
 
-    ch_busco_lineages_path = params.busco_lineages_path
-        ? Channel.fromPath(params.busco_lineages_path, checkIfExists: true).collect()
-        : Channel.value([])
+    // Without a pre-downloaded --busco_lineages_path, download each
+    // requested lineage exactly once (BUSCO_DOWNLOAD, one task per unique
+    // lineage) and merge the resulting busco_downloads/ trees together
+    // (MERGE_BUSCO_DOWNLOADS), so every BUSCO task below reuses the same
+    // local copy via --offline --download_path instead of each of the many
+    // stage/chunk/lineage tasks downloading it independently.
+    if (params.busco_lineages_path) {
+        ch_busco_lineages_path = Channel.fromPath(params.busco_lineages_path, checkIfExists: true).collect()
+    } else {
+        BUSCO_DOWNLOAD(ch_lineages.unique())
+
+        MERGE_BUSCO_DOWNLOADS(BUSCO_DOWNLOAD.out.download_dir.collect())
+        ch_versions = ch_versions.mix(MERGE_BUSCO_DOWNLOADS.out.versions)
+
+        ch_busco_lineages_path = MERGE_BUSCO_DOWNLOADS.out.download_dir.collect()
+    }
 
     // BUSCO's own single-threaded post-processing of miniprot's candidate
     // alignments can run out of memory on highly fragmented raw assemblies
