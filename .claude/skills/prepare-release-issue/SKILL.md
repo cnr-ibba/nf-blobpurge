@@ -22,6 +22,7 @@ trailing `dev` suffix.
 
 Surveys everything that has landed on `dev` since the last release and
 drafts a single GitHub issue listing:
+
 - which existing issues will actually close on the `dev -> master` merge,
 - which merged PRs are included,
 - which PRs are still open/in-flight and therefore excluded unless merged
@@ -44,14 +45,17 @@ release-notes material.
 ## Steps
 
 1. **Find the last release tag** (read-only):
+
    ```bash
    git describe --tags --abbrev=0 origin/master 2>/dev/null || true
    ```
+
    If empty, there is no prior release — treat "since last release" as
    "since the start of the repo" (this is the case for the first release).
 
 2. **List merged PRs targeting `dev`** since that tag's date (or all, if no
    tag exists):
+
    ```bash
    gh pr list --state merged --base dev \
      --json number,title,mergedAt,body,url,author --limit 200
@@ -61,17 +65,20 @@ release-notes material.
 
 3. **Cross-check against the actual commit range** reachable on `dev` but
    not `master`, to catch anything a search might miss:
+
    ```bash
    git log --oneline master..dev
    ```
 
 4. **Extract closing-keyword issue references** from each merged PR body
    (case-insensitive, singular/plural/past tense, optional colon):
+
    ```
    \b(clos(e|es|ed)|fix(es|ed)?|resolv(e|es|ed))\s*:?\s*#[0-9]+\b
    ```
 
 5. **Pull metadata for each referenced issue**, for categorization:
+
    ```bash
    gh issue view <N> --json number,title,state,labels,url
    ```
@@ -86,13 +93,13 @@ release-notes material.
 
 Map existing repo labels to the CHANGELOG.md headings:
 
-| Label | CHANGELOG bucket |
-|---|---|
-| `enhancement` | `### Added` |
-| `bug` | `### Fixed` |
-| `dependencies` | `### Dependencies` |
-| `performance` | `### Fixed` (closest existing bucket — flag for review) |
-| anything else / unlabeled | "Other / needs manual placement" |
+| Label                     | CHANGELOG bucket                                        |
+| ------------------------- | ------------------------------------------------------- |
+| `enhancement`             | `### Added`                                             |
+| `bug`                     | `### Fixed`                                             |
+| `dependencies`            | `### Dependencies`                                      |
+| `performance`             | `### Fixed` (closest existing bucket — flag for review) |
+| anything else / unlabeled | "Other / needs manual placement"                        |
 
 State explicitly in the drafted issue that this categorization is a
 heuristic based on label text, not reliable enough to paste verbatim into
@@ -108,30 +115,33 @@ N issue(s) will be closeable and M PR(s) merged into `dev` since <last tag | pro
 ## Issues that will close on the dev -> master merge
 
 - [ ] #N <title> (<label>)
-...
+      ...
 
 ## Merged PRs included
 
 - #N <title> (@author, merged <date>)
-...
+  ...
 
 ## Not yet merged (excluded from this release unless merged before the cut)
 
 - #N <title> (open, targets dev, closes #M)
-...
+  ...
 
 ## Closes block for the release PR body
 
 <!-- copy-paste ready: this is what the `release` skill's dev -> master PR body needs -->
+
 Closes #N
 Closes #M
 
 ## CHANGELOG draft (heuristic — needs manual cleanup)
 
 ### `Added`
+
 - ...
 
 ### `Fixed`
+
 - ...
 
 ### `Dependencies`

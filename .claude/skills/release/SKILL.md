@@ -127,9 +127,11 @@ automatically:
 ## Phase 7 — publish
 
 **Confirm explicitly**, then:
+
 ```bash
 gh release create <version> --notes-file <path-to-changelog-section>
 ```
+
 (Extract the `## v<version>` section of `CHANGELOG.md` to a temp file first,
 or pass `--notes` inline.)
 
