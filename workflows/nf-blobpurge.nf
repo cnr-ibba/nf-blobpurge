@@ -8,6 +8,7 @@ include { ASSEMBLY_STATS          } from '../modules/local/assembly_stats/main'
 include { BLOBPURGE_REPORT        } from '../modules/local/blobpurge_report/main'
 include { READ_COVERAGE           } from '../subworkflows/local/read_coverage'
 include { ORGANELLE_ISOLATE       } from '../subworkflows/local/organelle_isolate'
+include { ORGANELLE_MERGE_FASTA as ORGANELLE_MERGE_FASTA_FILTERED       } from '../modules/local/organelle_merge_fasta/main'
 include { ORGANELLE_MERGE_FASTA as ORGANELLE_MERGE_FASTA_PURGEDUPS      } from '../modules/local/organelle_merge_fasta/main'
 include { ORGANELLE_MERGE_FASTA as ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS } from '../modules/local/organelle_merge_fasta/main'
 include { PURGE_DUPS              } from '../subworkflows/local/purge_dups'
@@ -46,14 +47,67 @@ workflow BLOBPURGE {
     )
 
     //
+    // STEP 0.5: organelle contig isolation (optional), BEFORE contamination
+    // filtering. Mitochondria are frequently taxonomically misclassified as
+    // bacterial contamination, so classifying organelle-like contigs (high
+    // copy number -> extreme coverage) off the RAW assembly + its
+    // already-aligned CRAM -- and physically splitting them out before
+    // BTK_FILTER's `--fasta` input is built -- means blobtools' taxonomic
+    // filter can never see, and so can never discard, an organelle contig.
+    // This also keeps them out of purge_dups'/purge_haplotigs' coverage-
+    // cutoff estimation downstream, with no separate accounting needed there
+    // (BTK_FILTER's own output is organelle-free by construction once its
+    // input is). Off by default -- when off, every channel below is a plain
+    // alias of today's channels, so the DAG and pipeline behaviour are
+    // unchanged.
+    //
+    def ch_fasta_for_filter = ch_samplesheet.map { meta, assembly, blobdir, reads_cram -> [ meta, assembly ] }
+    def ch_organelle_ids    = ch_samplesheet
+        .map { meta, assembly, blobdir, reads_cram -> meta }
+        .combine(Channel.fromPath("${projectDir}/assets/NO_FILE"))
+    def ch_organelle_fasta  = channel.empty() // [ meta, organelle_fasta ], only populated when the feature is on
+
+    if (params.run_organelle_isolation) {
+        def ch_organelle_reference = params.organelle_reference_fasta
+            ? Channel.fromPath(params.organelle_reference_fasta, checkIfExists: true)
+            : Channel.fromPath("${projectDir}/assets/NO_FILE")
+
+        ch_samplesheet
+            .map { meta, assembly, blobdir, reads_cram -> meta }
+            .combine(ch_organelle_reference)
+            .set { ch_organelle_reference_per_sample }
+
+        ORGANELLE_ISOLATE(
+            ch_samplesheet.map { meta, assembly, blobdir, reads_cram -> [ meta, assembly, reads_cram ] },
+            ch_organelle_reference_per_sample
+        )
+        ch_versions = ch_versions.mix(ORGANELLE_ISOLATE.out.versions)
+        ch_caveats  = ch_caveats.mix(ORGANELLE_ISOLATE.out.caveats)
+        ch_multiqc_files = ch_multiqc_files.mix(ORGANELLE_ISOLATE.out.multiqc_files)
+
+        ch_fasta_for_filter = ORGANELLE_ISOLATE.out.nuclear_fasta
+        ch_organelle_ids    = ORGANELLE_ISOLATE.out.organelle_ids
+        ch_organelle_fasta  = ORGANELLE_ISOLATE.out.organelle_fasta
+    }
+
+    //
     // STEP 1: contamination filtering, cross-checked against the BlobDir
     //
     BTK_FILTER(
-        ch_samplesheet.map { meta, assembly, blobdir, reads_cram -> [ meta, assembly, blobdir ] }
+        ch_fasta_for_filter
+            .join(ch_samplesheet.map { meta, assembly, blobdir, reads_cram -> [ meta, blobdir ] })
+            .join(ch_organelle_ids)
     )
     ch_versions = ch_versions.mix(BTK_FILTER.out.versions)
-    ch_stage_fastas = ch_stage_fastas.mix(BTK_FILTER.out.fasta.map { meta, fasta -> [ meta, 'filtered', fasta ] })
     ch_multiqc_files = ch_multiqc_files.mix(BTK_FILTER.out.span_check_mqc.map { _meta, f -> f })
+
+    def ch_filtered_stage_fasta = BTK_FILTER.out.fasta
+    if (params.run_organelle_isolation) {
+        ORGANELLE_MERGE_FASTA_FILTERED(BTK_FILTER.out.fasta.join(ch_organelle_fasta))
+        ch_versions = ch_versions.mix(ORGANELLE_MERGE_FASTA_FILTERED.out.versions)
+        ch_filtered_stage_fasta = ORGANELLE_MERGE_FASTA_FILTERED.out.fasta
+    }
+    ch_stage_fastas = ch_stage_fastas.mix(ch_filtered_stage_fasta.map { meta, fasta -> [ meta, 'filtered', fasta ] })
 
     //
     // STEP 2: read coverage for purge_dups (CRAM subset onto BTK_FILTER-retained contigs)
@@ -69,52 +123,14 @@ workflow BLOBPURGE {
     ch_multiqc_files = ch_multiqc_files.mix(READ_COVERAGE.out.multiqc_files)
 
     //
-    // STEP 2.5: organelle contig isolation (optional). Keeps organelle-like
-    // contigs (high copy number -> extreme coverage) out of purge_dups'/
-    // purge_haplotigs' coverage-cutoff estimation, without re-mapping: it
-    // works from READ_COVERAGE's own BAM. Off by default -- when off, every
-    // channel below is a plain alias of today's channels, so the DAG and
-    // pipeline behaviour are unchanged.
-    //
-    def ch_fasta_for_purge    = BTK_FILTER.out.fasta
-    def ch_stat_for_purge     = READ_COVERAGE.out.stat
-    def ch_base_cov_for_purge = READ_COVERAGE.out.base_cov
-    def ch_bam_for_purge      = READ_COVERAGE.out.bam
-    def ch_organelle_fasta    = channel.empty() // [ meta, organelle_fasta ], only populated when the feature is on
-
-    if (params.run_organelle_isolation) {
-        def ch_organelle_reference = params.organelle_reference_fasta
-            ? Channel.fromPath(params.organelle_reference_fasta, checkIfExists: true)
-            : Channel.fromPath("${projectDir}/assets/NO_FILE")
-
-        ch_samplesheet
-            .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> meta }
-            .combine(ch_organelle_reference)
-            .set { ch_organelle_reference_per_sample }
-
-        ORGANELLE_ISOLATE(
-            BTK_FILTER.out.fasta,
-            READ_COVERAGE.out.bam,
-            ch_organelle_reference_per_sample
-        )
-        ch_versions = ch_versions.mix(ORGANELLE_ISOLATE.out.versions)
-        ch_caveats  = ch_caveats.mix(ORGANELLE_ISOLATE.out.caveats)
-        ch_multiqc_files = ch_multiqc_files.mix(ORGANELLE_ISOLATE.out.multiqc_files)
-
-        ch_fasta_for_purge    = ORGANELLE_ISOLATE.out.nuclear_fasta
-        ch_stat_for_purge     = ORGANELLE_ISOLATE.out.stat
-        ch_base_cov_for_purge = ORGANELLE_ISOLATE.out.base_cov
-        ch_bam_for_purge      = ORGANELLE_ISOLATE.out.bam
-        ch_organelle_fasta    = ORGANELLE_ISOLATE.out.organelle_fasta
-    }
-
-    //
-    // STEP 3: purge_dups (always run)
+    // STEP 3: purge_dups (always run). BTK_FILTER.out.fasta/READ_COVERAGE's
+    // outputs are already organelle-free by construction whether or not
+    // organelle isolation is on -- no ch_*_for_purge indirection needed.
     //
     PURGE_DUPS(
-        ch_fasta_for_purge,
-        ch_stat_for_purge,
-        ch_base_cov_for_purge
+        BTK_FILTER.out.fasta,
+        READ_COVERAGE.out.stat,
+        READ_COVERAGE.out.base_cov
     )
     ch_versions = ch_versions.mix(PURGE_DUPS.out.versions)
     ch_caveats  = ch_caveats.mix(PURGE_DUPS.out.caveats)
@@ -132,8 +148,8 @@ workflow BLOBPURGE {
     //
     if (params.run_purge_haplotigs) {
         PURGE_HAPLOTIGS(
-            ch_fasta_for_purge,
-            ch_bam_for_purge
+            BTK_FILTER.out.fasta,
+            READ_COVERAGE.out.bam
         )
         ch_versions = ch_versions.mix(PURGE_HAPLOTIGS.out.versions)
         ch_caveats  = ch_caveats.mix(PURGE_HAPLOTIGS.out.caveats)
@@ -185,11 +201,15 @@ workflow BLOBPURGE {
         .map { meta, caveats -> [ meta, caveats.sort() ] }
         .set { ch_caveats_grouped }
 
+    // Distinct sentinel from ch_genomescope's assets/NO_FILE: BLOBPURGE_REPORT
+    // takes both in the same input tuple, and Nextflow refuses to stage two
+    // different input files under the identical literal name "NO_FILE" into
+    // one task's work dir.
     def ch_organelle_report = params.run_organelle_isolation
         ? ORGANELLE_ISOLATE.out.report_json
         : ch_samplesheet
-            .map { meta, assembly, blobdir, reads_cram, reads_r1, reads_r2 -> meta }
-            .combine(Channel.fromPath("${projectDir}/assets/NO_FILE"))
+            .map { meta, assembly, blobdir, reads_cram -> meta }
+            .combine(Channel.fromPath("${projectDir}/assets/NO_FILE_ORGANELLE"))
 
     ch_stats_grouped
         .join(BTK_FILTER.out.span_check)

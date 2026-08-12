@@ -7,8 +7,13 @@ process BTK_FILTER {
         ? 'https://depot.galaxyproject.org/singularity/blobtoolkit:4.5.3--pyhdfd78af_0'
         : 'quay.io/biocontainers/blobtoolkit:4.5.3--pyhdfd78af_0'}"
 
+    // organelle_ids: real file or NO_FILE. When real, these contig IDs are
+    // skipped entirely by check_span.py's BlobDir walk -- they were already
+    // isolated upstream of this process (see ORGANELLE_ISOLATE) and are
+    // absent from `assembly`, so they must not be double-counted into the
+    // span-conservation check's excluded_span.
     input:
-    tuple val(meta), path(assembly), path(blobdir)
+    tuple val(meta), path(assembly), path(blobdir), path(organelle_ids)
 
     output:
     tuple val(meta), path("${meta.id}.filtered.fasta"),    emit: fasta
@@ -28,6 +33,7 @@ process BTK_FILTER {
     def taxon_field    = params.taxon_field
     def taxrule_param = params.taxrule ?: ''
     def span_tolerance = params.span_tolerance
+    def exclude_ids_arg = organelle_ids.name != 'NO_FILE' ? "--exclude-ids ${organelle_ids}" : ''
     """
     TAXRULE="${taxrule_param}"
     if [ -z "\${TAXRULE}" ]; then
@@ -76,6 +82,7 @@ process BTK_FILTER {
         --exclude-taxa "${exclude_taxa}" \\
         --tolerance ${span_tolerance} \\
         --sample-id ${meta.id} \\
+        ${exclude_ids_arg} \\
         --output-json ${prefix}.span_check.json \\
         --output-mqc-json ${prefix}.span_check_mqc.json
 

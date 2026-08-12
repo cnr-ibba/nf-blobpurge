@@ -20,7 +20,7 @@ process BLOBPURGE_REPORT {
 
     script:
     def genomescope_arg = genomescope_summary.name != 'NO_FILE' ? "--genomescope-summary ${genomescope_summary}" : ''
-    def organelle_arg = organelle_report.name != 'NO_FILE' ? "--organelle-report ${organelle_report}" : ''
+    def organelle_arg = organelle_report.name != 'NO_FILE_ORGANELLE' ? "--organelle-report ${organelle_report}" : ''
     def run_ph_arg = params.run_purge_haplotigs ? '--run-purge-haplotigs' : ''
     def caveat_args = caveats.collect { "--caveats '${it.replace("'", "'\\''")}'" }.join(' ')
     """
