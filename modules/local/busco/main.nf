@@ -4,8 +4,8 @@ process BUSCO {
 
     conda "${moduleDir}/environment.yml"
     container "${workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container
-        ? 'https://depot.galaxyproject.org/singularity/busco:5.8.3--pyhdfd78af_1'
-        : 'quay.io/biocontainers/busco:5.8.3--pyhdfd78af_1'}"
+        ? 'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/96/963bad66c10646cf0adb1967cc462ad04d02789ddbfae4fbb94182291dbddf8c/data'
+        : 'community.wave.seqera.io/library/busco:6.1.0--6d1f7006d91892b3'}"
 
     // Always run with an explicit lineage: --auto-lineage is never used, so
     // results are comparable across stages and reproducible run to run.
