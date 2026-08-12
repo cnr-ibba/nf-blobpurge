@@ -57,7 +57,7 @@ python3 -c "import gzip, json, os; p = '<blobdir>/meta.json'; p = p if os.path.e
 
 ### `--busco_lineages`
 
-Mandatory, comma-separated, e.g. `--busco_lineages "chlorophyta_odb12,viridiplantae_odb12"`. There is no default lineage, and `--auto-lineage` is never used, so results stay comparable and reproducible across stages and runs. Use `--busco_lineages_path` to point at a local, pre-downloaded lineage directory instead of letting BUSCO download on demand.
+Mandatory, comma-separated, e.g. `--busco_lineages "chlorophyta_odb12,viridiplantae_odb12"`. There is no default lineage, and `--auto-lineage` is never used, so results stay comparable and reproducible across stages and runs. Unless `--busco_lineages_path` points at a local, pre-downloaded lineage directory, each requested lineage is downloaded automatically exactly once (`BUSCO_DOWNLOAD`) and that copy is reused by every assembly stage/chunk, rather than each of them downloading it independently.
 
 ### `--busco_min_contig_length`
 
