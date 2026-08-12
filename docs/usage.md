@@ -6,10 +6,11 @@
 
 blobpurge takes over **after** [sanger-tol/blobtoolkit](https://github.com/sanger-tol/blobtoolkit) (or a manual `blobtools create`/`blobtools add` run) has already produced a BlobDir for a short-read, de novo genome assembly. It does not regenerate the BlobDir. Starting from an existing assembly + BlobDir pair, it:
 
-1. removes contaminant contigs (`BTK_FILTER`), cross-checking that the assembly span is conserved;
-2. purges uncollapsed heterozygous haplotigs with `purge_dups`, cross-checked independently with `purge_haplotigs`;
-3. runs comparative BUSCO across the raw, filtered and purged assemblies;
-4. writes a single per-sample HTML report (`analyses/<sample_id>_blobpurge.html`) tying all of the above together with an explicit verdict.
+1. optionally isolates organelle-like (mitochondrial/plastid) contigs by extreme coverage, **before** contamination filtering (`ORGANELLE_ISOLATE`, see `--run_organelle_isolation` below);
+2. removes contaminant contigs (`BTK_FILTER`), cross-checking that the assembly span is conserved;
+3. purges uncollapsed heterozygous haplotigs with `purge_dups`, cross-checked independently with `purge_haplotigs`;
+4. runs comparative BUSCO across the raw, filtered and purged assemblies;
+5. writes a single per-sample HTML report (`analyses/<sample_id>_blobpurge.html`) tying all of the above together with an explicit verdict.
 
 Nothing about a specific organism, taxon, or BUSCO lineage is hardcoded: `--exclude_taxa` and `--busco_lineages` are mandatory parameters with no default, and the pipeline fails immediately with an explicit message if they are missing.
 
@@ -81,7 +82,7 @@ Both cutoff-estimation steps need a genuinely bimodal coverage distribution and 
 
 ### `--run_organelle_isolation`
 
-Optional, default `false`. When enabled, contigs with extreme sequencing coverage (mitochondrial/plastid genomes typically have a much higher copy number per cell than the nuclear genome) are isolated **before** `PURGE_DUPS`/`PURGE_HAPLOTIGS` run, so their coverage does not distort the auto-estimated cutoffs (`calcuts`, `bin/estimate_purgehaplotigs_cutoffs.py`), which both assume a bimodal _nuclear_ coverage distribution. Isolated contigs are not discarded: they are re-merged into the final assembly at every purge stage, and reported separately in an explicit "Organelle contig isolation" report section.
+Optional, default `false`. When enabled, contigs with extreme sequencing coverage (mitochondrial/plastid genomes typically have a much higher copy number per cell than the nuclear genome) are isolated from the **raw** assembly, using coverage from the reads CRAM already aligned to it -- **before** `BTK_FILTER` (contamination filtering) and `PURGE_DUPS`/`PURGE_HAPLOTIGS` run. This is deliberate, not incidental: organellar sequences are of prokaryotic ancestry (mitochondria from alphaproteobacteria, plastids from cyanobacteria) and can sometimes receive their best taxonomic hit against a bacterial reference in the BlobDir, so running this classification after `BTK_FILTER` would risk `--exclude_taxa` discarding an organelle contig as contamination before this feature ever saw it. Classifying and physically splitting organelle contigs out first means `blobtools filter` never sees -- and so can never discard -- them, and it also keeps their coverage out of `PURGE_DUPS`/`PURGE_HAPLOTIGS`' auto-estimated cutoffs (`calcuts`, `bin/estimate_purgehaplotigs_cutoffs.py`), which both assume a bimodal _nuclear_ coverage distribution. Isolated contigs are not discarded: they are re-merged into the final assembly at every stage (including `filtered`), and reported separately in an explicit "Organelle contig isolation" report section.
 
 ```bash
 --run_organelle_isolation true
@@ -95,8 +96,6 @@ Optional, default `false`. When enabled, contigs with extreme sequencing coverag
 A contig is isolated when its mean depth is at least `--organelle_coverage_multiplier` times the length-weighted median depth across all contigs, and (if `--organelle_max_length` is set) its length is at or below that bound. If `--organelle_reference_fasta` is given, every contig is also aligned against it with minimap2 and the match fraction is recorded in the report; by default this is informational only, but `--organelle_require_reference_match` turns it into an additional hard requirement.
 
 This pipeline does not assemble organelle genomes itself. A matching paired-end read subset is exported alongside the isolated contig FASTA (`organelle/<sample_id>.organelle_R{1,2}.fastq.gz`) for use with dedicated tools such as [GetOrganelle](https://github.com/Kai-Guo/GetOrganelle), [MitoHiFi](https://github.com/marcelauliano/MitoHiFi), or [oatk](https://github.com/c-zhou/oatk).
-
-**Known limitation**: organelle isolation runs _after_ `BTK_FILTER`. Organellar sequences are of prokaryotic ancestry (mitochondria from alphaproteobacteria, plastids from cyanobacteria) and can sometimes receive their best taxonomic hit against a bacterial reference in the BlobDir; if `--exclude_taxa` has already removed such a contig as contamination, this feature cannot recover it. Inspect the BlobDir's taxonomy assignments for unexpectedly bacterial-looking, high-coverage contigs before finalising `--exclude_taxa`.
 
 ### `--genomescope_summary`
 
