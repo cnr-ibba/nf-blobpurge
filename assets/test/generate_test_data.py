@@ -32,11 +32,12 @@ The organelle-like contig is deliberately labelled with the same BlobDir
 taxon ("Pseudomonadota") as one of the "contaminant" contigs -- already in
 conf/test.config's --exclude_taxa -- rather than a legitimate host taxon.
 This is what actually exercises ORGANELLE_ISOLATE running *before*
-BTK_FILTER: with --run_organelle_isolation true, the organelle contig must
-survive into every downstream stage FASTA despite matching an excluded
-taxon (were it labelled as host taxon instead, BTK_FILTER would never have
-touched it anyway, and the fixture would not catch a regression back to the
-old, buggy post-filter ordering).
+BTK_FILTER: since organelle isolation now runs by default (see
+--skip_organelle_isolation), the organelle contig must survive into every
+downstream stage FASTA despite matching an excluded taxon (were it labelled
+as host taxon instead, BTK_FILTER would never have touched it anyway, and
+the fixture would not catch a regression back to the old, buggy post-filter
+ordering).
 
 Everything here is synthetic and deterministic (fixed RNG seed) -- this is a
 plumbing fixture for -profile test, not a biologically meaningful assembly.

@@ -135,7 +135,7 @@ def main():
     parser.add_argument("--span-check", required=True)
     parser.add_argument("--busco-comparison", required=True)
     parser.add_argument("--genomescope-summary", default=None)
-    parser.add_argument("--organelle-report", default=None, help="bin/detect_organelles.py --output-json, if --run_organelle_isolation was used")
+    parser.add_argument("--organelle-report", default=None, help="bin/detect_organelles.py --output-json, if organelle isolation was not skipped (see --skip_organelle_isolation)")
     parser.add_argument("--caveats", action="append", default=[])
     parser.add_argument("--run-purge-haplotigs", action="store_true")
     parser.add_argument("--dup-drop-threshold", type=float, default=0.5)
@@ -253,7 +253,7 @@ def main():
 
     if organelle_report is None:
         organelle_html = (
-            '<p class="warn">Organelle isolation not enabled (see --run_organelle_isolation): no separate '
+            '<p class="warn">Organelle isolation was skipped (--skip_organelle_isolation): no separate '
             "accounting for mitochondrial/plastid contigs is available.</p>"
         )
     else:
