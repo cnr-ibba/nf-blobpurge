@@ -36,7 +36,7 @@ The pipeline processes each sample through the following stages:
 
 </details>
 
-Only produced when `--run_organelle_isolation` is `true` (default `false`). Runs **before** `BTK_FILTER`, classifying organelle-like (mitochondrial/plastid) contigs by extreme coverage on the raw assembly -- not after contamination filtering -- so that `blobtools filter` never sees, and so can never discard, an organelle contig that happens to carry a bacterial-looking taxonomic hit in the BlobDir. Isolated contigs are not contamination and are not discarded: `BTK_FILTER`/`purge_dups`/`purge_haplotigs` all run on the nuclear-only assembly so neither the taxonomic filter nor the coverage-cutoff estimation is distorted by the organelle's much higher copy number, and the isolated contigs are re-merged into the final assembly at every stage afterwards (including `filtered`).
+Produced by default (skipped only if `--skip_organelle_isolation` is set). Runs **before** `BTK_FILTER`, classifying organelle-like (mitochondrial/plastid) contigs by extreme coverage on the raw assembly -- not after contamination filtering -- so that `blobtools filter` never sees, and so can never discard, an organelle contig that happens to carry a bacterial-looking taxonomic hit in the BlobDir. Isolated contigs are not contamination and are not discarded: `BTK_FILTER`/`purge_dups`/`purge_haplotigs` all run on the nuclear-only assembly so neither the taxonomic filter nor the coverage-cutoff estimation is distorted by the organelle's much higher copy number, and the isolated contigs are re-merged into the final assembly at every stage afterwards (including `filtered`).
 
 ### BTK_FILTER
 

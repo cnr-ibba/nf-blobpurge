@@ -47,19 +47,18 @@ workflow BLOBPURGE {
     )
 
     //
-    // STEP 0.5: organelle contig isolation (optional), BEFORE contamination
-    // filtering. Mitochondria are frequently taxonomically misclassified as
-    // bacterial contamination, so classifying organelle-like contigs (high
-    // copy number -> extreme coverage) off the RAW assembly + its
-    // already-aligned CRAM -- and physically splitting them out before
-    // BTK_FILTER's `--fasta` input is built -- means blobtools' taxonomic
-    // filter can never see, and so can never discard, an organelle contig.
-    // This also keeps them out of purge_dups'/purge_haplotigs' coverage-
+    // STEP 0.5: organelle contig isolation (on by default, --skip_organelle_isolation
+    // to disable), BEFORE contamination filtering. Mitochondria are frequently
+    // taxonomically misclassified as bacterial contamination, so classifying
+    // organelle-like contigs (high copy number -> extreme coverage) off the
+    // RAW assembly + its already-aligned CRAM -- and physically splitting them
+    // out before BTK_FILTER's `--fasta` input is built -- means blobtools'
+    // taxonomic filter can never see, and so can never discard, an organelle
+    // contig. This also keeps them out of purge_dups'/purge_haplotigs' coverage-
     // cutoff estimation downstream, with no separate accounting needed there
     // (BTK_FILTER's own output is organelle-free by construction once its
-    // input is). Off by default -- when off, every channel below is a plain
-    // alias of today's channels, so the DAG and pipeline behaviour are
-    // unchanged.
+    // input is). When skipped, every channel below is a plain alias of
+    // today's channels, so the DAG and pipeline behaviour are unchanged.
     //
     def ch_fasta_for_filter = ch_samplesheet.map { meta, assembly, blobdir, reads_cram -> [ meta, assembly ] }
     def ch_organelle_ids    = ch_samplesheet
@@ -67,7 +66,7 @@ workflow BLOBPURGE {
         .combine(Channel.fromPath("${projectDir}/assets/NO_FILE"))
     def ch_organelle_fasta  = channel.empty() // [ meta, organelle_fasta ], only populated when the feature is on
 
-    if (params.run_organelle_isolation) {
+    if (!params.skip_organelle_isolation) {
         def ch_organelle_reference = params.organelle_reference_fasta
             ? Channel.fromPath(params.organelle_reference_fasta, checkIfExists: true)
             : Channel.fromPath("${projectDir}/assets/NO_FILE")
@@ -102,7 +101,7 @@ workflow BLOBPURGE {
     ch_multiqc_files = ch_multiqc_files.mix(BTK_FILTER.out.span_check_mqc.map { _meta, f -> f })
 
     def ch_filtered_stage_fasta = BTK_FILTER.out.fasta
-    if (params.run_organelle_isolation) {
+    if (!params.skip_organelle_isolation) {
         ORGANELLE_MERGE_FASTA_FILTERED(BTK_FILTER.out.fasta.join(ch_organelle_fasta))
         ch_versions = ch_versions.mix(ORGANELLE_MERGE_FASTA_FILTERED.out.versions)
         ch_filtered_stage_fasta = ORGANELLE_MERGE_FASTA_FILTERED.out.fasta
@@ -136,7 +135,7 @@ workflow BLOBPURGE {
     ch_caveats  = ch_caveats.mix(PURGE_DUPS.out.caveats)
 
     def ch_purge_dups_stage_fasta = PURGE_DUPS.out.purged_fasta
-    if (params.run_organelle_isolation) {
+    if (!params.skip_organelle_isolation) {
         ORGANELLE_MERGE_FASTA_PURGEDUPS(PURGE_DUPS.out.purged_fasta.join(ch_organelle_fasta))
         ch_versions = ch_versions.mix(ORGANELLE_MERGE_FASTA_PURGEDUPS.out.versions)
         ch_purge_dups_stage_fasta = ORGANELLE_MERGE_FASTA_PURGEDUPS.out.fasta
@@ -155,7 +154,7 @@ workflow BLOBPURGE {
         ch_caveats  = ch_caveats.mix(PURGE_HAPLOTIGS.out.caveats)
 
         def ch_purge_haplotigs_stage_fasta = PURGE_HAPLOTIGS.out.purged_fasta
-        if (params.run_organelle_isolation) {
+        if (!params.skip_organelle_isolation) {
             ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS(PURGE_HAPLOTIGS.out.purged_fasta.join(ch_organelle_fasta))
             ch_versions = ch_versions.mix(ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS.out.versions)
             ch_purge_haplotigs_stage_fasta = ORGANELLE_MERGE_FASTA_PURGEHAPLOTIGS.out.fasta
@@ -205,7 +204,7 @@ workflow BLOBPURGE {
     // takes both in the same input tuple, and Nextflow refuses to stage two
     // different input files under the identical literal name "NO_FILE" into
     // one task's work dir.
-    def ch_organelle_report = params.run_organelle_isolation
+    def ch_organelle_report = !params.skip_organelle_isolation
         ? ORGANELLE_ISOLATE.out.report_json
         : ch_samplesheet
             .map { meta, assembly, blobdir, reads_cram -> meta }

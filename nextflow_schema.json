@@ -125,12 +125,12 @@
             "title": "Organelle contig isolation",
             "type": "object",
             "fa_icon": "fas fa-dna",
-            "description": "Options controlling the optional isolation of organelle-like (mitochondrial/plastid) contigs, by coverage, before they reach PURGE_DUPS/PURGE_HAPLOTIGS.",
+            "description": "Options controlling the isolation of organelle-like (mitochondrial/plastid) contigs, by coverage, before they reach PURGE_DUPS/PURGE_HAPLOTIGS. Runs by default; can be skipped with --skip_organelle_isolation.",
             "properties": {
-                "run_organelle_isolation": {
+                "skip_organelle_isolation": {
                     "type": "boolean",
-                    "description": "Detect organelle-like contigs by extreme sequencing coverage (optionally corroborated by a reference match) and exclude them from purge_dups/purge_haplotigs coverage-cutoff estimation, so their high copy number does not distort the cutoffs. Isolated contigs are re-merged into the final assembly at each stage and reported separately, not discarded; a matching paired-end read subset is also exported for use with external organelle-assembly tools.",
-                    "fa_icon": "fas fa-toggle-on"
+                    "description": "Skip detection of organelle-like contigs by extreme sequencing coverage (optionally corroborated by a reference match), which otherwise runs by default and excludes such contigs from purge_dups/purge_haplotigs coverage-cutoff estimation so their high copy number does not distort the cutoffs (isolated contigs are re-merged into the final assembly at each stage and reported separately, not discarded; a matching paired-end read subset is also exported for use with external organelle-assembly tools). Set this if reads_cram coverage isn't suitable for organelle detection or the step isn't wanted.",
+                    "fa_icon": "fas fa-forward"
                 },
                 "organelle_coverage_multiplier": {
                     "type": "number",

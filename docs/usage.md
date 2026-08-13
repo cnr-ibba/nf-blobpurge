@@ -6,7 +6,7 @@
 
 blobpurge takes over **after** [sanger-tol/blobtoolkit](https://github.com/sanger-tol/blobtoolkit) (or a manual `blobtools create`/`blobtools add` run) has already produced a BlobDir for a short-read, de novo genome assembly. It does not regenerate the BlobDir. Starting from an existing assembly + BlobDir pair, it:
 
-1. optionally isolates organelle-like (mitochondrial/plastid) contigs by extreme coverage, **before** contamination filtering (`ORGANELLE_ISOLATE`, see `--run_organelle_isolation` below);
+1. isolates organelle-like (mitochondrial/plastid) contigs by extreme coverage, **before** contamination filtering, unless skipped (`ORGANELLE_ISOLATE`, see `--skip_organelle_isolation` below);
 2. removes contaminant contigs (`BTK_FILTER`), cross-checking that the assembly span is conserved;
 3. purges uncollapsed heterozygous haplotigs with `purge_dups`, cross-checked independently with `purge_haplotigs`;
 4. runs comparative BUSCO across the raw, filtered and purged assemblies;
@@ -80,12 +80,12 @@ Coverage for `purge_dups` is computed with `ngscstat`, purge_dups' Illumina/shor
 
 Both cutoff-estimation steps need a genuinely bimodal coverage distribution and can legitimately fail to find one for a given sample (e.g. low heterozygosity, low depth, or an already near-haploid assembly). Rather than aborting the whole multi-sample run, this is handled per sample: `purge_dups` carries that sample's filtered assembly through the `purge_dups` stage unchanged, and `purge_haplotigs` simply omits its stage for that sample -- both cases are logged as a caveat (both to stderr and in that sample's report) explaining why, rather than failing the pipeline or silently trusting degenerate cutoffs.
 
-### `--run_organelle_isolation`
+### `--skip_organelle_isolation`
 
-Optional, default `false`. When enabled, contigs with extreme sequencing coverage (mitochondrial/plastid genomes typically have a much higher copy number per cell than the nuclear genome) are isolated from the **raw** assembly, using coverage from the reads CRAM already aligned to it -- **before** `BTK_FILTER` (contamination filtering) and `PURGE_DUPS`/`PURGE_HAPLOTIGS` run. This is deliberate, not incidental: organellar sequences are of prokaryotic ancestry (mitochondria from alphaproteobacteria, plastids from cyanobacteria) and can sometimes receive their best taxonomic hit against a bacterial reference in the BlobDir, so running this classification after `BTK_FILTER` would risk `--exclude_taxa` discarding an organelle contig as contamination before this feature ever saw it. Classifying and physically splitting organelle contigs out first means `blobtools filter` never sees -- and so can never discard -- them, and it also keeps their coverage out of `PURGE_DUPS`/`PURGE_HAPLOTIGS`' auto-estimated cutoffs (`calcuts`, `bin/estimate_purgehaplotigs_cutoffs.py`), which both assume a bimodal _nuclear_ coverage distribution. Isolated contigs are not discarded: they are re-merged into the final assembly at every stage (including `filtered`), and reported separately in an explicit "Organelle contig isolation" report section.
+Runs by default. Set `--skip_organelle_isolation` (bare, or `--skip_organelle_isolation true`) to disable -- e.g. if `reads_cram` coverage isn't suitable for organelle detection or the step isn't wanted. When it runs, contigs with extreme sequencing coverage (mitochondrial/plastid genomes typically have a much higher copy number per cell than the nuclear genome) are isolated from the **raw** assembly, using coverage from the reads CRAM already aligned to it -- **before** `BTK_FILTER` (contamination filtering) and `PURGE_DUPS`/`PURGE_HAPLOTIGS` run. This is deliberate, not incidental: organellar sequences are of prokaryotic ancestry (mitochondria from alphaproteobacteria, plastids from cyanobacteria) and can sometimes receive their best taxonomic hit against a bacterial reference in the BlobDir, so running this classification after `BTK_FILTER` would risk `--exclude_taxa` discarding an organelle contig as contamination before this feature ever saw it. Classifying and physically splitting organelle contigs out first means `blobtools filter` never sees -- and so can never discard -- them, and it also keeps their coverage out of `PURGE_DUPS`/`PURGE_HAPLOTIGS`' auto-estimated cutoffs (`calcuts`, `bin/estimate_purgehaplotigs_cutoffs.py`), which both assume a bimodal _nuclear_ coverage distribution. Isolated contigs are not discarded: they are re-merged into the final assembly at every stage (including `filtered`), and reported separately in an explicit "Organelle contig isolation" report section.
 
 ```bash
---run_organelle_isolation true
+--skip_organelle_isolation              # to disable
 --organelle_coverage_multiplier 5.0     # default
 --organelle_max_length 300000           # optional AND-gate, disabled by default
 --organelle_reference_fasta ./mito_plastid_refs.fasta   # optional
