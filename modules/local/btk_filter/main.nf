@@ -7,8 +7,13 @@ process BTK_FILTER {
         ? 'https://depot.galaxyproject.org/singularity/blobtoolkit:4.5.3--pyhdfd78af_0'
         : 'quay.io/biocontainers/blobtoolkit:4.5.3--pyhdfd78af_0'}"
 
+    // organelle_ids: real file or NO_FILE. When real, these contig IDs are
+    // skipped entirely by check_span.py's BlobDir walk -- they were already
+    // isolated upstream of this process (see ORGANELLE_ISOLATE) and are
+    // absent from `assembly`, so they must not be double-counted into the
+    // span-conservation check's excluded_span.
     input:
-    tuple val(meta), path(assembly), path(blobdir)
+    tuple val(meta), path(assembly), path(blobdir), path(organelle_ids)
 
     output:
     tuple val(meta), path("${meta.id}.filtered.fasta"),    emit: fasta
@@ -28,6 +33,7 @@ process BTK_FILTER {
     def taxon_field    = params.taxon_field
     def taxrule_param = params.taxrule ?: ''
     def span_tolerance = params.span_tolerance
+    def exclude_ids_arg = organelle_ids.name != 'NO_FILE' ? "--exclude-ids ${organelle_ids}" : ''
     """
     TAXRULE="${taxrule_param}"
     if [ -z "\${TAXRULE}" ]; then
@@ -53,13 +59,19 @@ process BTK_FILTER {
 
     # blobtools filter writes the filtered FASTA next to the input (not
     # inside --output, which only holds the filtered BlobDir field JSONs),
-    # inserting ".<suffix>" right after the first "." of the input filename
-    # (e.g. "assembly.fasta" -> "assembly.filtered.fasta",
-    # "assembly.fasta.gz" -> "assembly.filtered.fasta.gz").
+    # inserting ".<suffix>" into the input filename -- but *where* depends on
+    # how many dots the input basename has (e.g. observed empirically:
+    # "assembly.fasta" -> "assembly.filtered.fasta", but
+    # "<sample>.nuclear.fasta" -> "<sample>.nuclear.filtered.fasta", i.e.
+    # right before the last extension, not after the first dot). Rather than
+    # hand-predict the exact name, discover whatever new FASTA file appeared
+    # next to the input -- it is the only one blobtools writes there.
     ASSEMBLY_BASENAME=\$(basename "${assembly}")
-    FILTERED_FASTA="\${ASSEMBLY_BASENAME%%.*}.filtered.\${ASSEMBLY_BASENAME#*.}"
-    if [ ! -s "\${FILTERED_FASTA}" ]; then
-        echo "ERROR: blobtools filter did not produce the expected filtered FASTA file '\${FILTERED_FASTA}'." >&2
+    FILTERED_FASTA_PATH=\$(find . -maxdepth 1 -type f \\( -name '*.fasta' -o -name '*.fasta.gz' -o -name '*.fa' -o -name '*.fa.gz' \\) ! -name "\${ASSEMBLY_BASENAME}" | head -n1)
+    FILTERED_FASTA=""
+    [ -n "\${FILTERED_FASTA_PATH}" ] && FILTERED_FASTA=\$(basename "\${FILTERED_FASTA_PATH}")
+    if [ -z "\${FILTERED_FASTA}" ] || [ ! -s "\${FILTERED_FASTA}" ]; then
+        echo "ERROR: blobtools filter did not produce a filtered FASTA file next to '\${ASSEMBLY_BASENAME}'." >&2
         exit 1
     fi
     if [[ "\${FILTERED_FASTA}" == *.gz ]]; then
@@ -76,6 +88,7 @@ process BTK_FILTER {
         --exclude-taxa "${exclude_taxa}" \\
         --tolerance ${span_tolerance} \\
         --sample-id ${meta.id} \\
+        ${exclude_ids_arg} \\
         --output-json ${prefix}.span_check.json \\
         --output-mqc-json ${prefix}.span_check_mqc.json
 

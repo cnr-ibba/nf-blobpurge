@@ -6,13 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `cnr-ibba/nf-blobpurge` is an nf-core-style Nextflow pipeline that runs **after** [sanger-tol/blobtoolkit](https://github.com/sanger-tol/blobtoolkit) has already classified a short-read de novo genome assembly. Given an existing assembly + BlobDir pair per sample, it:
 
-1. **`BTK_FILTER`** — removes contaminant contigs via `blobtools filter` against the existing BlobDir, with a programmatic span-conservation check (`bin/check_span.py`) that fails the process if `span(filtered) + span(excluded) != span(original)` within `--span_tolerance`.
-2. **`READ_COVERAGE`** — produces a purge_dups coverage stat/base-cov pair: subsets the reads CRAM (already aligned upstream to the raw assembly by blobtoolkit — always required as input) onto BTK_FILTER-retained contigs.
-3. **`PURGE_DUPS`** — always runs: `split_fa` → self `minimap2` → `calcuts` (+ `hist_plot.py`) → `purge_dups` → `get_seqs`.
-4. **`PURGE_HAPLOTIGS`** — optional (`--run_purge_haplotigs`, default `true`), independent cross-check on the _same_ coverage input, not a second pass over purge_dups' output. Cutoffs are auto-estimated from the sample's own bimodal depth distribution (`bin/estimate_purgehaplotigs_cutoffs.py`) instead of chosen by eye.
-5. **`BUSCO_COMPARE`** — runs BUSCO (never `--auto-lineage`) on every assembly stage (`raw`, `filtered`, `purge_dups`, `purge_haplotigs`) × every requested lineage, then builds one comparative table per sample (`bin/compare_busco.py`).
-6. **`BLOBPURGE_REPORT`** — one per-sample HTML report (`bin/generate_report.py`) tying span, BUSCO duplication, the optional GenomeScope2 comparison, and the purge_dups/purge_haplotigs size-disagreement check together into an explicit verdict. Every number in the report is read from an upstream process's own output JSON — nothing is hand-entered, and missing optional inputs are reported as explicitly "not available."
-7. **MultiQC** — aggregate QC/versions report across samples.
+1. **`ORGANELLE_ISOLATE`** — runs by default (`--skip_organelle_isolation` to disable), classifies organelle-like (mitochondrial/plastid) contigs by extreme coverage on the **raw** assembly, using the reads CRAM already aligned to it (no re-mapping), and physically splits them out **before** `BTK_FILTER` runs. This runs first, not after contamination filtering, specifically so `blobtools filter` never sees — and so can never discard — an organelle contig that happens to carry a bacterial-looking taxonomic hit in the BlobDir. Isolated contigs are re-merged into every downstream stage's assembly (including `filtered`).
+2. **`BTK_FILTER`** — removes contaminant contigs via `blobtools filter` against the existing BlobDir, with a programmatic span-conservation check (`bin/check_span.py`) that fails the process if `span(filtered) + span(excluded) != span(original)` within `--span_tolerance`. Runs on the nuclear-only assembly when organelle isolation is on.
+3. **`READ_COVERAGE`** — produces a purge_dups coverage stat/base-cov pair: subsets the reads CRAM (already aligned upstream to the raw assembly by blobtoolkit — always required as input) onto BTK_FILTER-retained contigs.
+4. **`PURGE_DUPS`** — always runs: `split_fa` → self `minimap2` → `calcuts` (+ `hist_plot.py`) → `purge_dups` → `get_seqs`.
+5. **`PURGE_HAPLOTIGS`** — optional (`--run_purge_haplotigs`, default `true`), independent cross-check on the _same_ coverage input, not a second pass over purge_dups' output. Cutoffs are auto-estimated from the sample's own bimodal depth distribution (`bin/estimate_purgehaplotigs_cutoffs.py`) instead of chosen by eye.
+6. **`BUSCO_COMPARE`** — runs BUSCO (never `--auto-lineage`) on every assembly stage (`raw`, `filtered`, `purge_dups`, `purge_haplotigs`) × every requested lineage, then builds one comparative table per sample (`bin/compare_busco.py`).
+7. **`BLOBPURGE_REPORT`** — one per-sample HTML report (`bin/generate_report.py`) tying span, BUSCO duplication, the optional organelle isolation and GenomeScope2 comparisons, and the purge_dups/purge_haplotigs size-disagreement check together into an explicit verdict. Every number in the report is read from an upstream process's own output JSON — nothing is hand-entered, and missing optional inputs are reported as explicitly "not available."
+8. **MultiQC** — aggregate QC/versions report across samples.
 
 Nothing about organism/taxon/lineage is hardcoded: `--exclude_taxa` and `--busco_lineages` are **mandatory** parameters with no default; the pipeline fails immediately and explicitly if either is missing.
 
@@ -29,7 +30,7 @@ Known caveats the pipeline surfaces on purpose (both to stderr and in the report
 nextflow run . -profile test,docker --outdir <OUTDIR>
 ```
 
-The `test` profile uses the synthetic fixture under `assets/test/` (see `assets/test/generate_test_data.py`) — a 6-contig toy assembly with one intentional near-duplicate contig pair and two "contaminant" contigs, plus a matching hand-built reads CRAM and a hand-built BlobDir. It is a plumbing fixture, not biological data. `conf/test.config` regenerates an absolute-path samplesheet at config-load time (nf-schema resolves samplesheet paths against the launch dir, not the CSV's location).
+The `test` profile uses the synthetic fixture under `assets/test/` (see `assets/test/generate_test_data.py`) — a 7-contig toy assembly with one intentional near-duplicate contig pair, two "contaminant" contigs, and one organelle-like contig at extreme coverage, plus a matching hand-built reads CRAM, a hand-built BlobDir, and a synthetic organelle reference FASTA. It is a plumbing fixture, not biological data. `conf/test.config` regenerates an absolute-path samplesheet at config-load time (nf-schema resolves samplesheet paths against the launch dir, not the CSV's location).
 
 Real runs require the mandatory params:
 
@@ -80,10 +81,11 @@ The samplesheet channel is `[ meta, assembly, blobdir, reads_cram ]`. `reads_cra
 
 A `ch_stage_fastas` channel of `[ meta, stage, fasta ]` accumulates one entry per pipeline stage (`raw`, `filtered`, `purge_dups`, and — if enabled — `purge_haplotigs`) and is the single input both `ASSEMBLY_STATS` and `BUSCO_COMPARE` fan out over. Adding a new assembly-producing stage means mixing a new `[ meta, '<stage_name>', fasta ]` entry into this channel — stats and BUSCO comparison follow automatically.
 
-A `ch_caveats` channel of `[ meta, caveat_string ]` is mixed from any subworkflow that wants to flag a methodological caveat (currently `READ_COVERAGE`/`PURGEDUPS_NGSCSTAT` and `PURGE_HAPLOTIGS`); it's grouped per sample and joined into the final report inputs, so caveats always reach the HTML report rather than being silently logged only to stderr.
+A `ch_caveats` channel of `[ meta, caveat_string ]` is mixed from any subworkflow that wants to flag a methodological caveat (currently `READ_COVERAGE`/`PURGEDUPS_NGSCSTAT`, `ORGANELLE_ISOLATE`, `PURGE_DUPS`, `PURGE_HAPLOTIGS`, and `BUSCO_COMPARE`); it's grouped per sample and joined into the final report inputs, so caveats always reach the HTML report rather than being silently logged only to stderr.
 
 ### Subworkflow layout (`subworkflows/local/`)
 
+- `organelle_isolate.nf` — optional, runs before `BTK_FILTER`: raw-assembly-wide coverage (via a `CRAM_TO_BAM` alias fed an empty "retained_ids" sentinel — see `bin/`), organelle/nuclear classification and FASTA split, and an organelle-only read export. Does not touch `READ_COVERAGE`/`PURGE_DUPS`/`PURGE_HAPLOTIGS` — those stay organelle-free by construction once `BTK_FILTER`'s own input is.
 - `read_coverage.nf` — CRAM subsetting, feeding a common `ngscstat` step (needs a name-sorted BAM; coordinate-sorted/indexed BAM is kept separately for `purge_haplotigs`).
 - `purge_dups.nf` — linear purge_dups toolchain.
 - `purge_haplotigs.nf` — parallel/independent cross-check, reuses the BAM from `read_coverage`.
@@ -115,3 +117,4 @@ Uses Nextflow's `channel.topic("versions")` pattern (newer nf-core style) in add
 - Follow the nf-core channel-naming convention already in use: `ch_<previousprocess>_for_<nextprocess>` for intermediate/terminal channels.
 - Resource defaults belong in `conf/base.config` under `withLabel:` selectors (standard nf-core process labels: `process_low`/`process_medium`/`process_high`, etc.), not hardcoded per-module.
 - Update `docs/usage.md` / `docs/output.md` and `CITATIONS.md` alongside any new mandatory param, output file, or tool dependency — these are hand-maintained, not generated.
+- Any contig set removed from an assembly _before_ it reaches `BTK_FILTER` (currently only `ORGANELLE_ISOLATE`) must also be excluded from `bin/check_span.py`'s BlobDir walk via its `--exclude-ids` flag, not just left absent from `--original-fasta` — the BlobDir walk that computes `excluded_span` is otherwise unconditional over every ID the BlobDir knows about, regardless of what's actually in the FASTA, and will double-count such contigs into the span-conservation check if they're not skipped explicitly.

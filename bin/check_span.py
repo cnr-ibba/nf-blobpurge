@@ -86,11 +86,26 @@ def main():
     parser.add_argument("--exclude-taxa", required=True, help="Comma-separated taxa excluded by BTK_FILTER")
     parser.add_argument("--tolerance", type=float, default=0.001, help="Max relative discrepancy allowed")
     parser.add_argument("--sample-id", required=True)
+    parser.add_argument(
+        "--exclude-ids",
+        default=None,
+        help=(
+            "Optional newline-delimited contig ID file (e.g. bin/detect_organelles.py's "
+            "--output-organelle-ids) to skip entirely when walking the BlobDir -- these "
+            "contigs were isolated upstream of BTK_FILTER and are no longer part of "
+            "--original-fasta's scope, so they must not be double-counted into excluded_span."
+        ),
+    )
     parser.add_argument("--output-json", required=True)
     parser.add_argument("--output-mqc-json", required=True, help="MultiQC custom-content JSON path")
     args = parser.parse_args()
 
     exclude_taxa = {t.strip() for t in args.exclude_taxa.split(",") if t.strip()}
+
+    skip_ids = set()
+    if args.exclude_ids:
+        with open(args.exclude_ids) as handle:
+            skip_ids = {line.strip() for line in handle if line.strip()}
 
     original_spans = fasta_spans(args.original_fasta)
     filtered_spans = fasta_spans(args.filtered_fasta)
@@ -124,6 +139,8 @@ def main():
     excluded_ids = []
     retained_ids = []
     for ctg_id, ctg_len, cat in zip(identifiers, lengths, categories):
+        if ctg_id in skip_ids:
+            continue
         label = keys[cat] if keys is not None and isinstance(cat, int) else cat
         if label in exclude_taxa:
             excluded_span += ctg_len
@@ -150,6 +167,8 @@ def main():
         "tolerance": args.tolerance,
         "taxon_field": args.taxon_field,
         "exclude_taxa": sorted(exclude_taxa),
+        "excluded_ids_skipped": sorted(skip_ids),
+        "excluded_ids_skipped_n_contigs": len(skip_ids),
         "pass": passed,
     }
 

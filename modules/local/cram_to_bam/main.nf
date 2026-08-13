@@ -8,32 +8,37 @@ process CRAM_TO_BAM {
         : 'quay.io/biocontainers/samtools:1.24--h9dcdb79_0'}"
 
     // Subsets the reads CRAM (aligned upstream to the *original*, unfiltered
-    // assembly) down to the contigs that survived BTK_FILTER, and sorts +
-    // indexes the result for purge_dups' ngscstat.
+    // assembly) down to a positive list of contig IDs, and sorts + indexes
+    // the result. An empty retained_ids file is a deliberate "no filtering"
+    // sentinel: `samtools view` with zero region arguments returns every
+    // contig, so this same module also serves as a raw-assembly-wide BAM
+    // producer for ORGANELLE_ISOLATE (fed assets/NO_FILE as retained_ids) --
+    // see SAMTOOLS_VIEW_SUBSET for the same idiom used the other way around.
     input:
     tuple val(meta), path(original_assembly), path(reads_cram), path(retained_ids)
 
     output:
-    tuple val(meta), path("${meta.id}.coverage.sorted.bam"), path("${meta.id}.coverage.sorted.bam.bai"), emit: bam
+    tuple val(meta), path("*.coverage.sorted.bam"), path("*.coverage.sorted.bam.bai"), emit: bam
     path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
+    def prefix = task.ext.prefix ?: meta.id
     """
     samtools faidx ${original_assembly}
     samtools index -@ ${task.cpus} ${reads_cram}
 
     samtools view -@ ${task.cpus} -b \\
         -T ${original_assembly} \\
-        -o ${meta.id}.subset.bam \\
+        -o ${prefix}.subset.bam \\
         ${reads_cram} \\
         \$(tr '\\n' ' ' < ${retained_ids})
 
-    samtools sort -@ ${task.cpus} -o ${meta.id}.coverage.sorted.bam ${meta.id}.subset.bam
-    samtools index -@ ${task.cpus} ${meta.id}.coverage.sorted.bam
-    rm -f ${meta.id}.subset.bam
+    samtools sort -@ ${task.cpus} -o ${prefix}.coverage.sorted.bam ${prefix}.subset.bam
+    samtools index -@ ${task.cpus} ${prefix}.coverage.sorted.bam
+    rm -f ${prefix}.subset.bam
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -42,8 +47,9 @@ process CRAM_TO_BAM {
     """
 
     stub:
+    def prefix = task.ext.prefix ?: meta.id
     """
-    touch ${meta.id}.coverage.sorted.bam ${meta.id}.coverage.sorted.bam.bai
+    touch ${prefix}.coverage.sorted.bam ${prefix}.coverage.sorted.bam.bai
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         stub: "CRAM_TO_BAM"

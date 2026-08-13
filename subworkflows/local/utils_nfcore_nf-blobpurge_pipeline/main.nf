@@ -173,6 +173,16 @@ def validateInputParameters() {
   the lineage(s) must be supplied explicitly.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~""")
     }
+
+    if (params.organelle_require_reference_match && !params.organelle_reference_fasta) {
+        log.warn("""
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  --organelle_require_reference_match has no effect without --organelle_reference_fasta.
+  There is no reference to match against, so organelle isolation is falling back
+  to coverage/length alone -- as if --organelle_require_reference_match had not
+  been passed at all.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~""")
+    }
 }
 
 //

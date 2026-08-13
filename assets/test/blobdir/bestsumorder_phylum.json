@@ -3,5 +3,5 @@
     "name": "bestsumorder_phylum",
     "type": "category",
     "keys": ["Chlorophyta", "Pseudomonadota", "Bacteroidota"],
-    "values": [0, 0, 0, 1, 2, 0]
+    "values": [0, 0, 0, 1, 2, 0, 1]
 }
